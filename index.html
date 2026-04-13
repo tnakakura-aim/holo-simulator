@@ -2142,23 +2142,16 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         if (!gyroEnabled) {
             three3D.mesh.rotation.y += (tRY - three3D.mesh.rotation.y) * alpha;
             three3D.mesh.rotation.x += (tRX - three3D.mesh.rotation.x) * alpha;
-            three3D.mesh.position.x += (0 - three3D.mesh.position.x) * alpha;
-            three3D.mesh.position.y += (0 - three3D.mesh.position.y) * alpha;
-            three3D.camera.position.x += (0 - three3D.camera.position.x) * alpha;
-            three3D.camera.position.y += (0 - three3D.camera.position.y) * alpha;
         } else {
-            // rotation固定、カメラを平行移動 → 飛び出た頂点だけ視差で動く
-            three3D.mesh.rotation.y += (0 - three3D.mesh.rotation.y) * alpha;
-            three3D.mesh.rotation.x += (0 - three3D.mesh.rotation.x) * alpha;
-            three3D.mesh.position.x += (0 - three3D.mesh.position.x) * alpha;
-            three3D.mesh.position.y += (0 - three3D.mesh.position.y) * alpha;
-            const camPX = gyroSign * currentTiltX * 150;
-            const camPY = gyroSign * -currentTiltY * 100;
-            three3D.camera.position.x += (camPX - three3D.camera.position.x) * alpha;
-            three3D.camera.position.y += (camPY - three3D.camera.position.y) * alpha;
+            // ジャイロ時はBGをcharの20%だけ回転（峰がわずかに動く視差）
+            three3D.mesh.rotation.y += (tRY * 0.2 - three3D.mesh.rotation.y) * alpha;
+            three3D.mesh.rotation.x += (tRX * 0.2 - three3D.mesh.rotation.x) * alpha;
         }
-        // lookAtはカメラXY位置と同じ方向を向かせる（平行移動のみ・震え防止）
-        three3D.camera.lookAt(three3D.camera.position.x, three3D.camera.position.y, 0);
+        three3D.mesh.position.x += (0 - three3D.mesh.position.x) * alpha;
+        three3D.mesh.position.y += (0 - three3D.mesh.position.y) * alpha;
+        three3D.camera.position.x += (0 - three3D.camera.position.x) * alpha;
+        three3D.camera.position.y += (0 - three3D.camera.position.y) * alpha;
+        three3D.camera.lookAt(0, 0, 0);
         three3D.charMesh.rotation.y += (tRY - three3D.charMesh.rotation.y) * alpha;
         three3D.charMesh.rotation.x += (tRX - three3D.charMesh.rotation.x) * alpha;
 
