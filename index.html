@@ -1,0 +1,2533 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ホログラムシミュレーター</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: radial-gradient(ellipse at 50% 35%, #08080f 0%, #000000 70%);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            font-family: sans-serif; overflow: auto; user-select: none;
+        }
+
+        .controls {
+            margin-bottom: 28px; display: flex; gap: 8px; z-index: 10; align-items: center; flex-wrap: wrap; justify-content: center;
+            background: rgba(4,4,10,0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 10px 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.07);
+            box-shadow: 0 4px 28px rgba(0,0,0,0.7);
+        }
+        .control-group {
+            display: flex; gap: 6px; align-items: center; background: rgba(255,255,255,0.04); padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);
+        }
+        button, .file-upload-btn {
+            padding: 4px 9px; font-size: 12px; font-weight: bold; height: 26px; line-height: 18px; box-sizing: border-box;
+            cursor: pointer; border: 1px solid rgba(255,255,255,0.13);
+            background: linear-gradient(180deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.03) 100%);
+            color: #bbb;
+            border-radius: 5px; transition: all 0.15s ease; display: inline-flex; align-items: center; justify-content: center; text-align: center;
+            letter-spacing: 0.4px;
+        }
+        button:hover, .file-upload-btn:hover { background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%); border-color: rgba(255,255,255,0.26); color: white; }
+        
+        button.active { 
+            background: linear-gradient(180deg, #223b52 0%, #101f2d 100%);
+            border-color: #5dade2; color: #e8f4fb;
+            box-shadow: 0 0 14px rgba(93, 173, 226, 0.5), inset 0 1px 0 rgba(255,255,255,0.12); 
+        }
+
+        #btnMaskR.active { background: linear-gradient(180deg, #4d1515 0%, #2a0a0a 100%); border-color: #ff4d4d; }
+        #btnMaskG.active { background: linear-gradient(180deg, #163d16 0%, #091d09 100%); border-color: #4dff4d; }
+        #btnMaskB.active { background: linear-gradient(180deg, #152848 0%, #0a1525 100%); border-color: #4da6ff; }
+        #btnMaskY.active { background: linear-gradient(180deg, #3d3d00 0%, #1e1e00 100%); border-color: #ffff00; color: #ffee44; }
+        #btnMaskW.active { background: linear-gradient(180deg, #ffffff 0%, #d0d0d0 100%); border-color: #ffffff; color: #000; }
+        #btnMaskK.active { background: linear-gradient(180deg, #2a2a2a 0%, #111 100%); border-color: #888888; }
+        #btnMaskEdge.active { background: linear-gradient(180deg, #3d3d11 0%, #1a1a00 100%); border-color: #ffff00; }
+        #btnInt4.active { background: linear-gradient(180deg, #4d224f 0%, #2a1030 100%); border-color: #d15de2; box-shadow: 0 0 14px rgba(209, 93, 226, 0.65); }
+        #btnInt5 { border-color: rgba(255,34,136,0.55); color: #e888bb; }
+        #btnInt5.active { background: linear-gradient(180deg, #5a0030 0%, #2e0018 100%); border-color: #ff2288; color: #ffaadd; box-shadow: 0 0 20px rgba(255,34,136,0.85), 0 0 40px rgba(255,34,136,0.30); }
+        #btnInt6 { border-color: rgba(200,0,50,0.6); color: #ff66aa; }
+        #btnInt6.active { background: linear-gradient(180deg, #3a0010 0%, #1a0008 100%); border-color: #ff0044; color: #ffccdd; box-shadow: 0 0 30px rgba(255,0,68,1.0), 0 0 60px rgba(255,0,68,0.45), 0 0 100px rgba(255,0,68,0.20); }
+        #btnMonoSk.active    { background: linear-gradient(180deg, #1e1a2a 0%, #0d0b14 100%); border-color: #9988cc; color: #ddccff; }
+        #btnMonoSkThin.active { background: linear-gradient(180deg, #111520 0%, #080a10 100%); border-color: #6655aa; color: #cbbfee; }
+        #btnGold.active { background: linear-gradient(180deg, #524014 0%, #2a200a 100%); border-color: #f1c40f; color: #fff; box-shadow: 0 0 14px rgba(241, 196, 15, 0.6); }
+        #btnPrism.active { background: linear-gradient(180deg, #3c1a59 0%, #140d2b 100%); border-color: #7ee6ff; color: #f8f5ff; box-shadow: 0 0 16px rgba(126, 230, 255, 0.55), 0 0 28px rgba(255, 34, 136, 0.20); }
+
+        .shape-btn { padding: 4px 10px; font-size: 14px; font-weight: normal; }
+        .file-upload-btn input[type="file"] { display: none; }
+        .group-label { color: #888; font-size: 11px; padding: 0 4px; letter-spacing: 0.5px; }
+
+        #scaleWrap { display: flex; justify-content: center; align-items: flex-start; }
+        .card-perspective { width: 480px; height: 300px; perspective: 1200px; cursor: pointer; transform-origin: top center; }
+        .card-3d {
+            width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
+            border-radius: 16px; transition: transform 0.1s linear;
+            --light-angle: 0deg; --light-intensity: 0;
+            will-change: transform;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+
+        .card-shadow { position: absolute; inset: 0; border-radius: 16px; transform: translateZ(-5px); box-shadow: 0 30px 60px rgba(0,0,0,0.95), 0 10px 25px rgba(0,0,0,0.7); pointer-events: none; }
+        .card-thickness {
+            position: absolute; inset: 0; border-radius: 16px; transform: translateZ(var(--z));
+            background: linear-gradient(var(--light-angle), rgba(255,255,255, calc(0.2 + var(--light-intensity) * 0.8)) 0%, #444 30%, #000 80%);
+            border: 1px solid rgba(255,255,255,0.05); pointer-events: none;
+        }
+
+        .card-front { position: absolute; inset: 0; border-radius: 16px; transform: translateZ(0px); transform-style: preserve-3d; overflow: hidden; background: #03030a; }
+        #mainCanvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+        .card-edge-top { position: absolute; inset: 0; border-radius: 16px; z-index: 3; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1); transition: box-shadow 0.1s linear; }
+        .card-frame { position: absolute; inset: 0; border: 1.5px solid rgba(255,255,255,0.35); border-top-color: rgba(255,255,255,0.55); border-radius: 16px; z-index: 4; pointer-events: none; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); }
+
+        /* ===== OFF ボタン ===== */
+        #btnShapeOff.active { background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%); border-color: #666; color: #999; }
+
+        /* ===== モノトーン ===== */
+        #btnMonoGray.active { background: linear-gradient(180deg, #2a2a2a 0%, #111 100%); border-color: #aaa; color: #ddd; }
+        #btnMonoBW1.active  { background: linear-gradient(180deg, #1a1a1a 0%, #080808 100%); border-color: #ddd; color: #fff; }
+        #btnMonoBW2.active  { background: linear-gradient(180deg, #1a1a1a 0%, #080808 100%); border-color: #ddd; color: #fff; }
+        #btnMonoBW3.active  { background: linear-gradient(180deg, #1a1a1a 0%, #080808 100%); border-color: #ddd; color: #fff; }
+
+        /* ===== 3D モード ===== */
+        #threeWrap { display: flex; justify-content: center; align-items: flex-start; height: 300px; }
+        #threeWrap canvas { border-radius: 16px; box-shadow: 0 30px 60px rgba(0,0,0,0.95), 0 10px 25px rgba(0,0,0,0.7); }
+        /* iOS Safari: overflow:hidden だけでは WebGL canvas を角丸クリップできないため
+           clip-path で矩形角丸クリッピングを強制する（楕円マスクは使わない） */
+        #threeContainer {
+            border-radius: 16px;
+            overflow: hidden;
+            transform: translateZ(0); /* GPU レイヤーに昇格させ overflow:hidden を確実に適用 */
+            clip-path: inset(0 round 16px);
+            -webkit-clip-path: inset(0 round 16px);
+        }
+        #aiStatus3D { display: none; color: #aaa; font-size: 11px; text-align: center; margin-top: 6px; margin-bottom: 2px; }
+
+        #charCanvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; border-radius: 16px; transform: translateZ(0px); z-index: 10; }
+        input[type="range"].ctrl-range { width: 55px; height: 4px; vertical-align: middle; cursor: pointer; accent-color: #5dade2; }
+        .slider-val { color: #777; font-size: 10px; min-width: 22px; display: inline-block; text-align: right; font-family: monospace; }
+        .group-label-sm { color: #666; font-size: 10px; padding: 0 2px; letter-spacing: 0.3px; }
+
+        /* フルスクリーン */
+        body.card-fullscreen .controls { display: none !important; }
+        body.card-fullscreen { justify-content: center; align-items: center; }
+        #fs-hint { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); color: rgba(0,212,255,0.45); font-size: 0.65rem; font-family: 'Orbitron',sans-serif; letter-spacing: 3px; pointer-events: none; z-index: 9999; display: none; }
+        body.card-fullscreen #fs-hint { display: block; }
+        #btnGyro.active { background: linear-gradient(180deg,#163d16,#091d09); border-color: #4dff4d; color: #4dff4d; }
+
+        /* ===== モバイル対応 ===== */
+        @media (max-width:600px) {
+            body,html { height:auto; min-height:100vh; justify-content:flex-start; padding:8px 0 24px; }
+            .controls {
+                width:calc(100vw - 12px); max-width:100vw; margin-bottom:12px;
+                overflow-x:auto; flex-wrap:nowrap; align-items:flex-start;
+                border-radius:10px; padding:8px 10px; gap:5px;
+                -webkit-overflow-scrolling:touch; scrollbar-width:none;
+            }
+            .controls::-webkit-scrollbar { display:none; }
+            .control-group { flex-shrink:0; }
+            #btnScale15, #btnScale2 { display:none; }
+
+        }
+    </style>
+    <script src="https://unpkg.com/three@0.128.0/build/three.js"></script>
+    <!-- ネイティブMSAA使用: EffectComposer/FXAAを廃止しWebGLのantialias MSAAを直接利用 -->
+</head>
+<body>
+
+<div class="controls" id="controls">
+    <div class="control-group">
+        <span class="group-label">背景</span>
+        <label class="file-upload-btn">画像<input type="file" id="bgUpload" accept="image/*"></label>
+        <button id="btnBgClear" style="color:#ff6666;border-color:rgba(255,80,80,0.35);padding:4px 7px;">✕</button>
+        <span class="group-label-sm" style="margin-left:5px">凸</span>
+        <button id="btn3DDepth0" class="active">平</button>
+        <button id="btn3DDepth05">+0.5</button>
+        <button id="btn3DDepth1">+1</button>
+        <button id="btn3DDepth2">+2</button>
+        <button id="btn3DDepth3">+3</button>
+    </div>
+    <div class="control-group">
+        <span class="group-label">キャラ</span>
+        <label class="file-upload-btn">画像<input type="file" id="charUpload" accept="image/*"></label>
+        <button id="btnCharClear" style="color:#ff6666;border-color:rgba(255,80,80,0.35);padding:4px 7px;">✕</button>
+        <span class="group-label-sm">X</span><input type="range" id="charX" min="0" max="100" value="50" step="1" class="ctrl-range"><span class="slider-val" id="charXVal">50</span>
+        <span class="group-label-sm">Y</span><input type="range" id="charY" min="0" max="100" value="50" step="1" class="ctrl-range"><span class="slider-val" id="charYVal">50</span>
+        <span class="group-label-sm">Sz</span><input type="range" id="charScale" min="20" max="300" value="100" step="1" class="ctrl-range"><span class="slider-val" id="charScaleVal">100%</span>
+        <span class="group-label-sm">Z</span><input type="range" id="charDepthSlider" min="0" max="100" value="30" step="1" class="ctrl-range"><span class="slider-val" id="charDepthVal">30</span>
+        <span class="group-label-sm" style="margin-left:4px">凸</span>
+        <button id="btnCharDisp0" class="active">平</button>
+        <button id="btnCharDisp05">+0.5</button>
+        <button id="btnCharDisp1">+1</button>
+        <button id="btnCharDisp2">+2</button>
+        <button id="btnCharDisp3">+3</button>
+    </div>
+    <div class="control-group">
+        <span class="group-label">抽出</span>
+        <button id="btnMaskAll" class="active">ALL</button>
+        <button id="btnMaskR">R</button><button id="btnMaskG">G</button><button id="btnMaskB">B</button>
+        <button id="btnMaskY">Y</button><button id="btnMaskW">W</button><button id="btnMaskK">K</button>
+        <button id="btnMaskEdge">EDGE</button>
+    </div>
+    <div class="control-group">
+        <span class="group-label">輝度</span>
+        <button id="btnInt1">1</button><button id="btnInt2" class="active">2</button><button id="btnInt3">3</button><button id="btnInt4">4</button><button id="btnInt5">5</button><button id="btnInt6">6</button>
+    </div>
+    <div class="control-group">
+        <span class="group-label">彩度</span>
+        <button id="btnSat0" class="active">0</button><button id="btnSatPlus">+</button><button id="btnSatPlus2">++</button><button id="btnSatPlus3">+++</button>
+    </div>
+    <div class="control-group">
+        <span class="group-label">色</span>
+        <button id="btnRainbow">✧ 虹</button><button id="btnSilver">◎ 銀</button><button id="btnGold">✴ 金</button><button id="btnPremium" class="active">✦ PREM</button>
+    </div>
+    <div class="control-group">
+        <span class="group-label">質感</span>
+        <button id="btnTriangle" class="shape-btn">▽</button><button id="btnSquare" class="shape-btn">□</button><button id="btnHexagon" class="shape-btn">⬣</button>
+        <button id="btnStained" class="shape-btn">◇</button><button id="btnBump" class="shape-btn">凸</button><button id="btnSand" class="shape-btn">❇</button><button id="btnPrism" class="shape-btn">◈</button><button id="btnStar" class="shape-btn">★</button><button id="btnShapeOff" class="shape-btn active">OFF</button>
+    </div>
+    <div class="control-group">
+        <span class="group-label">モノ</span>
+        <button id="btnMonoOff" class="active">OFF</button>
+        <button id="btnMonoGray">B</button>
+        <button id="btnMonoBW1">S</button>
+        <button id="btnMonoBW2">M</button>
+        <button id="btnMonoBW3">L</button>
+        <button id="btnMonoSk">SK</button>
+        <button id="btnMonoSkThin">SK-</button>
+    </div>
+    <div class="control-group">
+        <span class="group-label">サイズ</span>
+        <button id="btnScale1" class="active">×1</button>
+        <button id="btnScale15">×1.5</button>
+        <button id="btnScale2">×2</button>
+        <span class="group-label" style="margin-left:8px">操作</span>
+        <button id="btnGyro">ジャイロ</button>
+        <button id="btnToggle3D" class="active">3D</button>
+    </div>
+</div>
+
+<div id="fs-hint">TAP TO EXIT</div>
+
+<div id="scaleWrap" style="height:300px; display:none;">
+<div class="card-perspective" id="cardContainer">
+    <div class="card-3d" id="card">
+        <div class="card-shadow"></div>
+        <div class="card-thickness" style="--z: -4px;"></div><div class="card-thickness" style="--z: -3px;"></div><div class="card-thickness" style="--z: -2px;"></div><div class="card-thickness" style="--z: -1px;"></div>
+        <div class="card-front" style="transform-style:preserve-3d;">
+            <canvas id="mainCanvas" width="960" height="600"></canvas>
+            <canvas id="charCanvas" width="960" height="600"></canvas>
+            <div class="card-edge-top" id="cardEdgeTop"></div>
+            <div class="card-frame"></div>
+        </div>
+    </div>
+</div>
+</div>
+
+<div id="aiStatus3D"><span class="ai3d-spin"></span><span id="aiStatusText3D">AI深度解析中...</span></div>
+<div id="threeWrap">
+    <div id="threeContainer" style="width:480px; height:300px; border-radius:16px; overflow:hidden;"></div>
+</div>
+
+<script>
+    const card = document.getElementById('card');
+    const mainCanvas = document.getElementById('mainCanvas');
+    const mCtx = mainCanvas.getContext('2d', { alpha: false });
+    const charCanvasEl = document.getElementById('charCanvas');
+    const charCtx = charCanvasEl.getContext('2d');
+    
+    const holoCanvas = document.createElement('canvas'); 
+    const maskCanvas = document.createElement('canvas');
+    const compCanvas = document.createElement('canvas');
+    const edgeCanvas = document.createElement('canvas');
+    const edgeHoloCanvas = document.createElement('canvas');
+    const charCompCanvas = document.createElement('canvas');
+    const charMaskCanvas = document.createElement('canvas');
+    const charEdgeCanvas = document.createElement('canvas');
+    [holoCanvas, maskCanvas, compCanvas, edgeCanvas, edgeHoloCanvas, charCompCanvas, charMaskCanvas, charEdgeCanvas].forEach(c => { c.width = 960; c.height = 600; });
+    
+    const hCtx = holoCanvas.getContext('2d');
+    const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+    const cCtx = compCanvas.getContext('2d');
+    const edgeCtx = edgeCanvas.getContext('2d');
+    const edgeHoloCtx = edgeHoloCanvas.getContext('2d');
+    const charCompCtx = charCompCanvas.getContext('2d');
+    const charMaskCtx = charMaskCanvas.getContext('2d', { willReadFrequently: true });
+    const charEdgeCtx = charEdgeCanvas.getContext('2d');
+
+    let currentMode = 'premium', currentShape = 'none', maskModes = new Set(['all']);
+    let _isMobilePerf = false;  // モバイル軽量化フラグ（init時にセット）
+    let currentIntensityLevel = '2'; 
+    let currentSaturationLevel = '0';
+    let currentMonoMode = 'off';
+    let currentTiltX = 0, currentTiltY = 0, returnAnim = null;
+    let baseImage = null, imageRect = { x: 0, y: 0, w: 960, h: 600 }, originalImageData = null;
+    let charImage = null, charImageRect = { x: 0, y: 0, w: 480, h: 600 };
+    let charState = { x: 50, y: 50, scale: 100, depth: 30 };
+
+    const OPACITY_MAP = {
+        all:     { '1': 0.08, '2': 0.15, '3': 0.28, '4': 0.4, '5': 0.6, '6': 0.82 },
+        extract: { '1': 0.34, '2': 0.45, '3': 0.64, '4': 0.70, '5': 0.76, '6': 0.92 }
+    };
+    const SATURATION_MAP = { '0': 1, plus: 5.5, plus2: 14.5, plus3: 72 };
+    const SAT_BRIGHT_COMP = { '0': 1.00, plus: 0.90, plus2: 0.82, plus3: 0.73 };
+    const PRISM_LAYER_MAP = { '1': 3, '2': 4, '3': 5, '4': 6, '5': 7, '6': 9 };
+    // ◈ ポスタリゼーション用レイヤー（輝度レベルに応じて動的に変更）
+    let posterLayers = [];
+    let posterCtxs = [];
+
+    function clamp(v, min, max) {
+        return Math.max(min, Math.min(max, v));
+    }
+
+    // === モノトーン処理 ===
+    const monoCanvas = document.createElement('canvas');
+    monoCanvas.width = 960; monoCanvas.height = 600;
+    const monoCtx = monoCanvas.getContext('2d', { willReadFrequently: true });
+
+    function applyMonotone(srcCanvas) {
+        if (currentMonoMode === 'off') return srcCanvas;
+        monoCtx.clearRect(0, 0, 960, 600);
+        monoCtx.drawImage(srcCanvas, 0, 0);
+        const id = monoCtx.getImageData(0, 0, 960, 600);
+        const d = id.data;
+        if (currentMonoMode === 'gray') {
+            for (let i = 0; i < d.length; i += 4) {
+                const g = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+                d[i] = d[i+1] = d[i+2] = g;
+            }
+            monoCtx.putImageData(id, 0, 0);
+        } else if (currentMonoMode === 'sketch') {
+            const W = 960, H2 = 600;
+            // ① グレースケール配列に事前変換
+            const gray = new Uint8Array(W * H2);
+            for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+                gray[j] = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+            }
+            // ② Sobel細線 + 暗部トーン + ハッシュ粒状（方向性・パターン性なし）
+            const out = new Uint8ClampedArray(d.length);
+            for (let y = 1; y < H2 - 1; y++) {
+                for (let x = 1; x < W - 1; x++) {
+                    const r = y * W + x;
+                    const g00 = gray[r-W-1], g01 = gray[r-W], g02 = gray[r-W+1];
+                    const g10 = gray[r-1],                     g12 = gray[r+1];
+                    const g20 = gray[r+W-1], g21 = gray[r+W], g22 = gray[r+W+1];
+                    const gx = -g00 - 2*g10 - g20 + g02 + 2*g12 + g22;
+                    const gy = -g00 - 2*g01 - g02 + g20 + 2*g21 + g22;
+                    const mag = Math.abs(gx) + Math.abs(gy);
+                    const edge = mag > 42 ? Math.min(235, mag * 1.05) : 0;
+                    // 暗部トーン：べき乗で暗部を強く引きずる
+                    const g = gray[r];
+                    const dark01 = g < 150 ? (150 - g) / 150 : 0;
+                    const tone = dark01 * dark01 * 180; // 二乗で暗部集中
+                    // ハッシュ粒状: 整数演算のみ・方向性ゼロ・暗いほど粒が増える
+                    const dk = 255 - g;
+                    const h = (x * 1619 ^ y * 5807 ^ x * 3571 ^ y * 7919) & 0xFF;
+                    const grain1 = h        < (dk * 0.48 | 0) ? dk * 0.28 : 0; // 粗粒
+                    const grain2 = (h >> 1) < (dk * 0.32 | 0) ? dk * 0.16 : 0; // 細粒
+                    // 中間調の質感補強
+                    const mid = (g > 55 && g < 175) ? (90 - Math.abs(g - 112)) * 0.028 : 0;
+                    const dark = edge + tone + grain1 + grain2 + mid;
+                    const v = dark >= 255 ? 0 : 255 - dark;
+                    const idx = r * 4;
+                    out[idx] = out[idx+1] = out[idx+2] = v;
+                    out[idx+3] = 255;
+                }
+            }
+            monoCtx.putImageData(new ImageData(out, W, H2), 0, 0);
+        } else if (currentMonoMode === 'sketchthin') {
+            const W = 960, H2 = 600;
+            const gray = new Uint8Array(W * H2);
+            for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+                gray[j] = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+            }
+            // SK-: 閾値を高くして極細エッジのみ + 弱トーン + 細粒のみ
+            const out = new Uint8ClampedArray(d.length);
+            for (let y = 1; y < H2 - 1; y++) {
+                for (let x = 1; x < W - 1; x++) {
+                    const r = y * W + x;
+                    const g00 = gray[r-W-1], g01 = gray[r-W], g02 = gray[r-W+1];
+                    const g10 = gray[r-1],                     g12 = gray[r+1];
+                    const g20 = gray[r+W-1], g21 = gray[r+W], g22 = gray[r+W+1];
+                    const gx = -g00 - 2*g10 - g20 + g02 + 2*g12 + g22;
+                    const gy = -g00 - 2*g01 - g02 + g20 + 2*g21 + g22;
+                    const mag = Math.abs(gx) + Math.abs(gy);
+                    // 閾値を高く → 弱いグラデ部分は無視、強い輪郭だけ1px幅で残る
+                    const edge = mag > 90 ? Math.min(255, mag * 0.88) : 0;
+                    // トーン適用範囲はSKと同じ（g < 150）、強度だけ弱め
+                    const g = gray[r];
+                    const dark01 = g < 150 ? (150 - g) / 150 : 0;
+                    const tone = dark01 * dark01 * 110;
+                    // 粒状は細粒のみ（粗粒なし）
+                    const dk = 255 - g;
+                    const h = (x * 1619 ^ y * 5807 ^ x * 3571 ^ y * 7919) & 0xFF;
+                    const grain = (h >> 1) < (dk * 0.22 | 0) ? dk * 0.11 : 0;
+                    const dark = edge + tone + grain;
+                    const v = dark >= 255 ? 0 : 255 - dark;
+                    const idx = r * 4;
+                    out[idx] = out[idx+1] = out[idx+2] = v;
+                    out[idx+3] = 255;
+                }
+            }
+            monoCtx.putImageData(new ImageData(out, W, H2), 0, 0);
+        } else {
+            // BW poster: S=2帯均等, M=SとLの中間(非均等3帯), L=均等3帯(旧M)
+            for (let i = 0; i < d.length; i += 4) {
+                const g = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+                let bw;
+                if (currentMonoMode === 'bw1') {        // S: 2帯
+                    bw = g < 128 ? 0 : 255;
+                } else if (currentMonoMode === 'bw2') { // M: 非均等3帯（S〜L中間の見た目）
+                    bw = g < 100 ? 0 : g < 218 ? 255 : 0;
+                } else {                                // L: 均等3帯
+                    bw = g < 85 ? 0 : g < 170 ? 255 : 0;
+                }
+                d[i] = d[i+1] = d[i+2] = bw;
+            }
+            monoCtx.putImageData(id, 0, 0);
+        }
+        return monoCanvas;
+    }
+
+    function getCurrentSaturationBoost() {
+        return SATURATION_MAP[currentSaturationLevel];
+    }
+
+    function getSatBrightComp() {
+        return SAT_BRIGHT_COMP[currentSaturationLevel];
+    }
+
+    function getPrismLayerCount() {
+        return PRISM_LAYER_MAP[currentIntensityLevel] || 4;
+    }
+
+    // === ◈ ポスタリゼーション（NewFile_holo.htmlベース） ===
+
+    function generatePosterLayers() {
+        if (!originalImageData) return;
+        const n = getPrismLayerCount();
+        const step = 256 / n;
+        const d = originalImageData.data;
+
+        posterLayers = Array.from({length: n}, () => {
+            const c = document.createElement('canvas'); c.width = 960; c.height = 600; return c;
+        });
+        posterCtxs = posterLayers.map(c => c.getContext('2d'));
+
+        const outData = posterLayers.map(() => maskCtx.createImageData(960, 600));
+        for (let j = 0; j < d.length; j += 4) {
+            if (d[j + 3] < 10) continue;
+            const l = d[j] * 0.3 + d[j + 1] * 0.59 + d[j + 2] * 0.11;
+            const level = Math.min(n - 1, Math.floor(l / step));
+            const out = outData[level].data;
+            out[j] = 255; out[j + 1] = 255; out[j + 2] = 255; out[j + 3] = 255;
+        }
+        posterLayers.forEach((c, i) => posterCtxs[i].putImageData(outData[i], 0, 0));
+    }
+
+    // imgData から posterLayers を生成して返す（キャラ用プリズムに使用）
+    function generatePosterLayersFromData(imgData) {
+        const n = getPrismLayerCount();
+        const step = 256 / n;
+        const d = imgData.data;
+        const layers = Array.from({length: n}, () => {
+            const c = document.createElement('canvas'); c.width = 960; c.height = 600; return c;
+        });
+        const ctxs = layers.map(c => c.getContext('2d'));
+        const outData = layers.map(() => maskCtx.createImageData(960, 600));
+        for (let j = 0; j < d.length; j += 4) {
+            if (d[j + 3] < 10) continue;
+            const l = d[j] * 0.3 + d[j + 1] * 0.59 + d[j + 2] * 0.11;
+            const level = Math.min(n - 1, Math.floor(l / step));
+            const out = outData[level].data;
+            out[j] = 255; out[j + 1] = 255; out[j + 2] = 255; out[j + 3] = 255;
+        }
+        layers.forEach((c, i) => ctxs[i].putImageData(outData[i], 0, 0));
+        return layers;
+    }
+
+    function getPrismColor(bh, al, hO, brightnessBase) {
+        let h, s, l;
+        if (currentMode === 'none') {
+            const lv = Math.max(0, Math.min(100, brightnessBase + al * 20));
+            return `hsl(0, 0%, ${lv}%)`;
+        }
+        if (currentMode === 'silver') {
+            // 凸銀と同様の色変化：中明度でわずかな彩度、ピークは白に近づく
+            const base = 22 + brightnessBase * 0.36;
+            const lv = base + Math.pow((al + 1) / 2, 2) * 48 + Math.pow(Math.max(0, al), 6) * 30;
+            h = 212;
+            s = Math.max(0, 22 - Math.abs(lv - 44) * 0.40);
+            l = lv;
+        } else if (currentMode === 'gold') {
+            // 凸金と同様の色変化：暗部はアンバー(h40)、ピークは白に近づく(s→0)
+            const base = 26 + brightnessBase * 0.38;
+            const lv = base + Math.pow((al + 1) / 2, 2) * 40 + Math.pow(Math.max(0, al), 4) * 45;
+            h = 40 + (hO * 0.015) + Math.min(12, Math.max(0, (lv - 42) * 0.32));
+            s = Math.max(0, 96 - Math.pow(Math.max(0, lv - 60), 1.4) * 3.5);
+            l = lv;
+        } else if (currentMode === 'premium') {
+            const f = Math.pow(Math.max(0, al), 4);
+            h = (bh + hO * 3) % 360;
+            s = 100;
+            const _base = Math.max(50, brightnessBase);
+            l = _base + f * (100 - _base);
+        } else {
+            h = (bh + hO) % 360;
+            s = 96;
+            l = Math.max(46, brightnessBase + al * 22);
+        }
+        return `hsl(${h}, ${s}%, ${Math.max(0, Math.min(100, l))}%)`;
+    }
+
+function drawPrismFromImage(tiltX, tiltY, bh, sa) {
+        if (!originalImageData) return;
+        if (posterLayers.length === 0) generatePosterLayers();
+        const n = posterLayers.length;
+
+        // === 金・銀・虹: バンプメタル描画 × posterLayerで輝度帯切り抜き ===
+        if (currentMode === 'gold' || currentMode === 'silver' || currentMode === 'rainbow') {
+            const isGold = currentMode === 'gold';
+            const isSilver = currentMode === 'silver';
+            const cx2 = 480 + tiltX * 120, cy2 = 300 + tiltY * 80;
+            const lx = tiltX, ly = tiltY;
+            const lDist = Math.sqrt(lx * lx + ly * ly);
+            const hlStrBase = 0.42 + lDist * 0.58;
+            const scan = tiltX * 4 + tiltY * 4;
+
+            const bumpPos = bumpLarge.map(bp => ({
+                bx: bp.baseX + Math.cos(bp.moveAngX) * lx * bp.moveRange * bp.ht + Math.cos(bp.moveAngY) * ly * bp.moveRange * bp.ht,
+                by: bp.baseY + Math.sin(bp.moveAngX) * lx * bp.moveRange * bp.ht + Math.sin(bp.moveAngY) * ly * bp.moveRange * bp.ht,
+            }));
+
+            hCtx.clearRect(0, 0, 960, 600);
+
+            for (let i = 0; i < n; i++) {
+                cCtx.clearRect(0, 0, 960, 600);
+
+                const layerT = n <= 1 ? 0.5 : i / (n - 1); // 0=暗層, 1=明層
+                const phase = i * Math.PI * 2 / Math.max(1, n);
+                const al = Math.cos(scan * 4 + phase);
+
+                // モード別 色相・彩度・明度
+                let hueI, sat, ambL;
+                if (isGold) {
+                    // 暗層=amber(38°) → 明層=pale gold(50°)、彩度は明るいほど下がる(金属ハイライト=白っぽい)
+                    hueI = 38 + layerT * 12;
+                    sat = Math.max(18, 92 - layerT * 56);
+                    ambL = 10 + layerT * 42 + al * 5;
+                } else if (isSilver) {
+                    // 全層スチールブルー固定、彩度低め
+                    hueI = 212;
+                    sat = Math.max(3, 22 - layerT * 16);
+                    ambL = 10 + layerT * 40 + al * 5;
+                } else { // rainbow
+                    hueI = (bh + i * (300 / Math.max(1, n - 1))) % 360;
+                    sat = 92;
+                    ambL = 28 + layerT * 12 + al * 8;
+                }
+                const brightOfs = al * (isGold || isSilver ? 4 : 8);
+
+                // ダーク下地
+                if (isGold) {
+                    cCtx.fillStyle = `hsl(34, ${sat * 0.28}%, ${5 + layerT * 4}%)`;
+                } else if (isSilver) {
+                    cCtx.fillStyle = `hsl(212, ${sat * 0.28}%, ${5 + layerT * 4}%)`;
+                } else {
+                    cCtx.fillStyle = `hsl(${hueI}, 22%, ${5 + i * 1.5}%)`;
+                }
+                cCtx.fillRect(0, 0, 960, 600);
+
+                // アンビエント（チルト追従ラジアル）
+                const ambGrad = cCtx.createRadialGradient(cx2, cy2, 0, cx2, cy2, 780);
+                ambGrad.addColorStop(0,    `hsla(${(hueI + 8) % 360}, ${sat}%, ${ambL}%, 0.90)`);
+                ambGrad.addColorStop(0.55, `hsla(${hueI}, ${sat * 0.70}%, ${ambL * 0.55}%, 0.55)`);
+                ambGrad.addColorStop(1,    `hsla(${(hueI - 6 + 360) % 360}, ${sat * 0.35}%, 5%, 0)`);
+                cCtx.fillStyle = ambGrad; cCtx.fillRect(0, 0, 960, 600);
+
+                // ネックグロー
+                for (let bi = 0; bi < bumpPos.length; bi++) {
+                    for (let bj = bi + 1; bj < bumpPos.length; bj++) {
+                        const pi = bumpPos[bi], pj = bumpPos[bj];
+                        const Ri = bumpLarge[bi].size, Rj = bumpLarge[bj].size;
+                        const ddx = pj.bx - pi.bx, ddy = pj.by - pi.by;
+                        const ddist = Math.sqrt(ddx * ddx + ddy * ddy);
+                        const thresh = (Ri + Rj) * 0.40;
+                        if (ddist < thresh && ddist > 1) {
+                            const t = Math.pow(1 - ddist / thresh, 1.5);
+                            const mx = (pi.bx + pj.bx) * 0.5, my = (pi.by + pj.by) * 0.5;
+                            const neckH = Math.min(Ri, Rj) * 0.48 * t;
+                            const nkL = 14 + brightOfs * 0.5;
+                            cCtx.save();
+                            cCtx.translate(mx, my); cCtx.rotate(Math.atan2(ddy, ddx));
+                            const nkG = cCtx.createLinearGradient(-ddist * 0.5, 0, ddist * 0.5, 0);
+                            nkG.addColorStop(0,   `hsla(${hueI}, ${sat}%, ${nkL}%, ${t * 0.65})`);
+                            nkG.addColorStop(0.5, `hsla(${(hueI + 10) % 360}, ${sat}%, ${nkL + 14}%, ${t * 0.52})`);
+                            nkG.addColorStop(1,   `hsla(${hueI}, ${sat}%, ${nkL}%, ${t * 0.65})`);
+                            cCtx.beginPath(); cCtx.ellipse(0, 0, ddist * 0.5 + 2, neckH, 0, 0, Math.PI * 2);
+                            cCtx.fillStyle = nkG; cCtx.fill(); cCtx.restore();
+                        }
+                    }
+                }
+
+                // 各バンプ：シャドウ + 金属ハイライト（中心白→色リング→暗部）
+                for (let bi = 0; bi < bumpLarge.length; bi++) {
+                    const bp = bumpLarge[bi];
+                    const { bx, by } = bumpPos[bi];
+                    const R = bp.size;
+                    const sx = bx - lx * R * 0.22, sy = by - ly * R * 0.22;
+                    const shGrad = cCtx.createRadialGradient(sx, sy, 0, bx, by, R * 1.7);
+                    shGrad.addColorStop(0,    `hsla(${(hueI - 8 + 360) % 360}, 50%, 0%, ${isGold ? 0.52 : isSilver ? 0.44 : 0.48})`);
+                    shGrad.addColorStop(0.45, `hsla(${(hueI - 4 + 360) % 360}, 35%, 1%, ${isGold ? 0.22 : isSilver ? 0.18 : 0.20})`);
+                    shGrad.addColorStop(1,    `hsla(0, 0%, 0%, 0)`);
+                    blobPath(cCtx, bx, by, R * 1.7, bp.shape); cCtx.fillStyle = shGrad; cCtx.fill();
+
+                    for (const hl of bp.hls) {
+                        const hlStr = hlStrBase + al * hl.str * 0.25;
+                        const hlx = bx + hl.rx * R * 0.44 + lx * R * hl.drift * 0.18;
+                        const hly = by + hl.ry * R * 0.44 + ly * R * hl.drift * 0.18;
+                        const hR = R * (0.88 + hl.str * 0.48);
+                        const baseStr = hl.selfGlow + Math.max(0, hlStr) * hl.str * 0.65;
+                        const strMul = isGold ? 0.94 : isSilver ? 0.86 : 0.90;
+                        const hlGrad = cCtx.createRadialGradient(hlx, hly, 0, hlx, hly, hR);
+                        hlGrad.addColorStop(0,    `hsla(${(hueI + 14) % 360},  5%, 100%, ${baseStr * strMul})`);
+                        hlGrad.addColorStop(0.14, `hsla(${(hueI +  8) % 360}, ${sat * 0.55}%, 94%, ${baseStr * 0.78})`);
+                        hlGrad.addColorStop(0.32, `hsla(${hueI},               ${sat}%, 66%, ${baseStr * 0.55})`);
+                        hlGrad.addColorStop(0.60, `hsla(${(hueI -  8 + 360) % 360}, ${sat * 0.75}%, 30%, ${baseStr * 0.26})`);
+                        hlGrad.addColorStop(1,    `hsla(${(hueI - 16 + 360) % 360}, ${sat * 0.40}%,  8%, 0)`);
+                        cCtx.beginPath(); cCtx.arc(hlx, hly, hR, 0, Math.PI * 2); cCtx.fillStyle = hlGrad; cCtx.fill();
+                    }
+                }
+
+                // マイクロテクスチャ
+                const mAl = hlStrBase * (0.26 + Math.max(0, al) * 0.14);
+                for (const bp of bumpMicro) {
+                    const mx2 = bp.x + lx * bp.size * 0.9 * bp.ht;
+                    const my2 = bp.y + ly * bp.size * 0.9 * bp.ht;
+                    cCtx.fillStyle = `hsla(${(hueI + 18) % 360}, ${sat * 0.12}%, 96%, ${mAl})`;
+                    cCtx.fillRect(mx2 - bp.size * 0.4, my2 - bp.size * 0.4, bp.size * 0.8, bp.size * 0.8);
+                }
+
+                // posterLayerで輝度帯をマスクして合成
+                cCtx.globalCompositeOperation = 'destination-in';
+                cCtx.drawImage(posterLayers[i], 0, 0);
+                cCtx.globalCompositeOperation = 'source-over';
+                hCtx.drawImage(compCanvas, 0, 0);
+            }
+            return;
+        }
+
+        // === 他モード: ポスタリゼーションベース ===
+        const scan = tiltX * 4 + tiltY * 4;
+
+        hCtx.fillStyle = `hsl(${bh}, 15%, 8%)`;
+        hCtx.fillRect(0, 0, 960, 600);
+
+        for (let i = 0; i < n; i++) {
+            cCtx.clearRect(0, 0, 960, 600);
+
+            if (i === 0) {
+                const al0 = Math.cos(scan * 4);
+                if (currentMode === 'gold' || currentMode === 'silver') {
+                    cCtx.fillStyle = getPrismColor(bh, al0, 0, 30);
+                } else {
+                    cCtx.fillStyle = `hsl(${bh}, 20%, ${42 + al0 * 15}%)`;
+                }
+                cCtx.fillRect(0, 0, 960, 600);
+            } else {
+                const phase = (i - 1) * Math.PI * 2 / n;
+                const al = Math.cos(scan * 4 + phase);
+                const hueOffset = (i - 1) * (300 / Math.max(1, n - 1));
+                const brightness = 52 + (i - 1) * (38 / Math.max(1, n - 1));
+
+                cCtx.fillStyle = getPrismColor(bh, al, hueOffset, brightness);
+                cCtx.fillRect(0, 0, 960, 600);
+
+                const gAngle = (i - 1) * Math.PI * 2 / Math.max(1, n - 1) + scan * 0.5;
+                const gx0 = 480 - 600 * Math.cos(gAngle), gy0 = 300 - 600 * Math.sin(gAngle);
+                const gx1 = 480 + 600 * Math.cos(gAngle), gy1 = 300 + 600 * Math.sin(gAngle);
+                const grad = cCtx.createLinearGradient(gx0, gy0, gx1, gy1);
+                grad.addColorStop(0,    'rgba(255,255,255,0)');
+                grad.addColorStop(0.18, getPrismColor(bh, al, hueOffset + 90, brightness + 6));
+                grad.addColorStop(0.38, getPrismColor(bh, al, hueOffset + 180, 70));
+                grad.addColorStop(0.50, getPrismColor(bh, al, hueOffset + 180, 76));
+                grad.addColorStop(0.62, getPrismColor(bh, al, hueOffset + 180, 70));
+                grad.addColorStop(0.82, getPrismColor(bh, al, hueOffset + 90, brightness + 6));
+                grad.addColorStop(1,    'rgba(255,255,255,0)');
+                cCtx.fillStyle = grad;
+                cCtx.fillRect(0, 0, 960, 600);
+            }
+
+            cCtx.globalCompositeOperation = 'destination-in';
+            cCtx.drawImage(posterLayers[i], 0, 0);
+            cCtx.globalCompositeOperation = 'source-over';
+            hCtx.drawImage(compCanvas, 0, 0);
+        }
+
+        // 凹凸ハイライトオーバーレイ（screen合成で薄く乗せる）
+        const lx = tiltX, ly = tiltY;
+        const lDist = Math.sqrt(lx * lx + ly * ly);
+        const hlStr = 0.14 + lDist * 0.20;
+        hCtx.save();
+        hCtx.globalCompositeOperation = 'screen';
+        for (let bi = 0; bi < bumpLarge.length; bi++) {
+            const bp = bumpLarge[bi];
+            const bx = bp.baseX + Math.cos(bp.moveAngX) * lx * bp.moveRange * bp.ht + Math.cos(bp.moveAngY) * ly * bp.moveRange * bp.ht;
+            const by = bp.baseY + Math.sin(bp.moveAngX) * lx * bp.moveRange * bp.ht + Math.sin(bp.moveAngY) * ly * bp.moveRange * bp.ht;
+            const R = bp.size * 0.65;
+            const hlGrad = hCtx.createRadialGradient(bx, by, 0, bx, by, R);
+            hlGrad.addColorStop(0,   `hsla(${bh}, 18%, 100%, ${hlStr * 0.62})`);
+            hlGrad.addColorStop(0.3, `hsla(${bh}, 45%, 68%, ${hlStr * 0.28})`);
+            hlGrad.addColorStop(1,   `hsla(${bh}, 20%, 10%, 0)`);
+            hCtx.beginPath();
+            hCtx.arc(bx, by, R, 0, Math.PI * 2);
+            hCtx.fillStyle = hlGrad;
+            hCtx.fill();
+        }
+        hCtx.restore();
+    }
+
+    function loadAndProcessImage(url) {
+        const img = new Image();
+        img.crossOrigin = "Anonymous"; 
+        img.onload = () => {
+            baseImage = img;
+            const ratio = Math.max(960 / img.width, 600 / img.height);
+            const nw = img.width * ratio, nh = img.height * ratio;
+            imageRect = { x: (960 - nw) / 2, y: (600 - nh) / 2, w: nw, h: nh };
+            maskCtx.fillStyle = "#000";
+            maskCtx.fillRect(0, 0, 960, 600);
+            maskCtx.drawImage(img, imageRect.x, imageRect.y, imageRect.w, imageRect.h);
+            originalImageData = maskCtx.getImageData(0, 0, 960, 600);
+            generatePosterLayers();
+            updateMask();
+            if (three3D) generateSyntheticDepth3D();
+            applyAIDepthFromImage(img);
+        };
+        img.src = url;
+    }
+
+    function loadBgImage(url) {
+        loadAndProcessImage(url);
+    }
+
+    function computeCharEdge() {
+        charEdgeCtx.clearRect(0, 0, 960, 600);
+        if (!charImage) return;
+        const tmp = document.createElement('canvas'); tmp.width = 960; tmp.height = 600;
+        tmp.getContext('2d').drawImage(charImage, charImageRect.x, charImageRect.y, charImageRect.w, charImageRect.h);
+        const data = tmp.getContext('2d').getImageData(0, 0, 960, 600).data;
+        const imgData = charEdgeCtx.createImageData(960, 600);
+        const out = imgData.data;
+        for (let y = 1; y < 599; y++) for (let x = 1; x < 959; x++) {
+            const i = (y * 960 + x) * 4;
+            const getLum = (idx) => (data[idx]*0.3 + data[idx+1]*0.59 + data[idx+2]*0.11);
+            const diff = Math.abs(getLum(i) - getLum(i+4)) + Math.abs(getLum(i) - getLum(i+960*4));
+            const edgeA = Math.max(0, Math.min(255, diff * 1.8));
+            out[i] = out[i+1] = out[i+2] = 255; out[i+3] = edgeA;
+        }
+        charEdgeCtx.putImageData(imgData, 0, 0);
+    }
+
+    function loadCharImage(url) {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+            charImage = img;
+            updateCharRect();
+            computeCharEdge();
+            drawChar();
+            generateSyntheticCharDepth3D();
+            applyAIDepthFromCharImage(img);
+            updateCharMesh();
+        };
+        img.src = url;
+    }
+
+    function updateCharRect() {
+        if (!charImage) return;
+        const fitScale = Math.min(480 / charImage.width, 600 / charImage.height);
+        const drawScale = fitScale * (charState.scale / 100);
+        const dw = charImage.width * drawScale;
+        const dh = charImage.height * drawScale;
+        charImageRect = {
+            x: (charState.x / 100) * 960 - dw / 2,
+            y: (charState.y / 100) * 600 - dh / 2,
+            w: dw, h: dh
+        };
+    }
+
+    function updateCharDepth() {
+        const depthPx = charState.depth * 0.5;
+        charCanvasEl.style.transform = `translateZ(${depthPx}px)`;
+    }
+
+    function drawChar() {
+        charCtx.clearRect(0, 0, 960, 600);
+        if (!charImage) return;
+        updateCharRect();
+
+        const hasEdge  = maskModes.has('edge');
+        const isPrism  = currentShape === 'prism';
+        const type     = maskModes.has('all') ? 'all' : 'extract';
+        const baseAlpha = OPACITY_MAP[type][currentIntensityLevel];
+        const alphaBoost = currentSaturationLevel === 'plus3' ? 1.18 : 1;
+        const bloomBoost = currentSaturationLevel === 'plus3' ? 1.16 : 1;
+        const bloomBlur1 = currentSaturationLevel === 'plus3' ? 5.5 : 7;
+
+        // キャラのシルエットマスク（charImage の alpha。charCanvasEl は未描画時に空なので直接生成）
+        const _silCanvas = document.createElement('canvas');
+        _silCanvas.width = 960; _silCanvas.height = 600;
+        _silCanvas.getContext('2d').drawImage(charImage, charImageRect.x, charImageRect.y, charImageRect.w, charImageRect.h);
+
+        // ══════════════════════════════════════════════════════
+        // PRISM パス — キャラ画像ベースのポスタリゼーションで独自プリズムを生成
+        // ── BG と同じ処理だが posterLayers をキャラ画像由来に切り替える ──
+        // ══════════════════════════════════════════════════════
+        if (isPrism) {
+            // 1. キャラ画像の輝度バンドから独自 posterLayers を生成
+            const _charTmp = document.createElement('canvas');
+            _charTmp.width = 960; _charTmp.height = 600;
+            _charTmp.getContext('2d').drawImage(charImage, charImageRect.x, charImageRect.y, charImageRect.w, charImageRect.h);
+            const _charImgData = _charTmp.getContext('2d').getImageData(0, 0, 960, 600);
+            const _charPosterLayers = generatePosterLayersFromData(_charImgData);
+
+            // 2. グローバルを一時的にキャラ用に差し替えて drawHologramBuffer を実行
+            //    → holoCanvas にキャラ画像ベースのプリズムが焼き付けられる
+            const _savePL = posterLayers, _savePCtxs = posterCtxs, _saveOID = originalImageData;
+            posterLayers = _charPosterLayers;
+            posterCtxs = _charPosterLayers.map(c => c.getContext('2d'));
+            originalImageData = _charImgData;
+            drawHologramBuffer(currentTiltX, currentTiltY);
+            posterLayers = _savePL; posterCtxs = _savePCtxs; originalImageData = _saveOID;
+
+            // 3. BG と同一手順でキャラシルエットに適用（黒下地 + prism → シルエットクリップ）
+            charCompCtx.clearRect(0, 0, 960, 600);
+            charCompCtx.fillStyle = '#000';
+            charCompCtx.fillRect(0, 0, 960, 600);
+            charCompCtx.filter = `saturate(${getCurrentSaturationBoost()}) brightness(${(0.86 * getSatBrightComp()).toFixed(3)})`;
+            charCompCtx.drawImage(applyMonotone(holoCanvas), 0, 0);
+            charCompCtx.filter = 'none';
+            charCompCtx.globalCompositeOperation = 'destination-in';
+            charCompCtx.drawImage(_silCanvas, 0, 0);
+            charCompCtx.globalCompositeOperation = 'source-over';
+
+            charCtx.drawImage(charCompCanvas, 0, 0);
+
+            // PRISM + EDGE: エッジホログラムを重ねる
+            if (hasEdge) {
+                charCompCtx.clearRect(0, 0, 960, 600);
+                charCompCtx.filter = currentSaturationLevel === 'plus3'
+                    ? `saturate(${getCurrentSaturationBoost()}) contrast(1.22) brightness(${getSatBrightComp()})`
+                    : `saturate(${getCurrentSaturationBoost()}) contrast(1.1) brightness(${(1.2 * getSatBrightComp()).toFixed(3)})`;
+                charCompCtx.drawImage(edgeHoloCanvas, 0, 0);
+                charCompCtx.filter = 'none';
+                charCompCtx.globalCompositeOperation = 'destination-in';
+                charCompCtx.drawImage(charEdgeCanvas, 0, 0);
+                charCompCtx.globalCompositeOperation = 'source-over';
+                const _ea = OPACITY_MAP['extract'][currentIntensityLevel];
+                const _ab = alphaBoost;
+                charCtx.save();
+                charCtx.globalCompositeOperation = 'screen';
+                charCtx.globalAlpha = clamp(_ea * 1.8 * _ab, 0.22, 0.92);
+                charCtx.drawImage(charCompCanvas, 0, 0);
+                charCtx.globalCompositeOperation = 'overlay';
+                charCtx.globalAlpha = clamp(_ea * 0.55, 0.10, 0.42);
+                charCtx.drawImage(charCompCanvas, 0, 0);
+                charCtx.filter = 'blur(5px)';
+                charCtx.globalCompositeOperation = 'screen';
+                charCtx.globalAlpha = clamp(_ea * 0.40 * _ab, 0.10, 0.55);
+                charCtx.drawImage(charCompCanvas, 0, 0);
+                charCtx.filter = 'none';
+                charCtx.globalAlpha = 1; charCtx.globalCompositeOperation = 'source-over';
+                charCtx.restore();
+            }
+
+            updateCharDepth();
+            updateCharMesh();
+            return;   // ← プリズムはここで終わり
+        }
+
+        // ══════════════════════════════════════════════════════
+        // 非プリズム パス
+        // ══════════════════════════════════════════════════════
+
+        // ── 1. キャラ画像を描画 ──────────────────────────────────────────
+        if (currentMonoMode === 'off') {
+            charCtx.drawImage(charImage, charImageRect.x, charImageRect.y, charImageRect.w, charImageRect.h);
+        } else {
+            const tmpMono = document.createElement('canvas');
+            tmpMono.width = 960; tmpMono.height = 600;
+            tmpMono.getContext('2d').drawImage(charImage, charImageRect.x, charImageRect.y, charImageRect.w, charImageRect.h);
+            charCtx.drawImage(applyMonotone(tmpMono), 0, 0);
+            // mono はキャラ外を不透明黒にする → シルエットでクリップ
+            charCtx.globalCompositeOperation = 'destination-in';
+            charCtx.drawImage(_silCanvas, 0, 0);
+            charCtx.globalCompositeOperation = 'source-over';
+        }
+
+        // ── 2. メインホログラムブレンド — EDGE時はスキップ（BG と同じ挙動）──
+        if (!hasEdge) {
+            charCompCtx.clearRect(0, 0, 960, 600);
+            charCompCtx.globalCompositeOperation = 'source-over';
+            charCompCtx.filter = `saturate(${getCurrentSaturationBoost()}) brightness(${getSatBrightComp()})`;
+            charCompCtx.drawImage(holoCanvas, 0, 0);
+            charCompCtx.filter = 'none';
+            charCompCtx.globalCompositeOperation = 'destination-in';
+            charCompCtx.drawImage(charCanvasEl, 0, 0);   // charCtx と同一 → 描画済みキャラ alpha でクリップ
+            charCompCtx.globalCompositeOperation = 'source-over';
+
+            charCtx.save();
+            if (currentMonoMode !== 'off') {
+                charCtx.globalCompositeOperation = 'multiply';
+                charCtx.globalAlpha = clamp(type === 'extract' ? baseAlpha * 3.0 * alphaBoost : baseAlpha * 5.0 * alphaBoost, 0.30, 1.0);
+                charCtx.drawImage(charCompCanvas, 0, 0);
+                charCtx.globalCompositeOperation = 'screen';
+                charCtx.globalAlpha = clamp(type === 'extract' ? baseAlpha * 1.0 * alphaBoost : baseAlpha * 1.8 * alphaBoost, 0.10, 0.55);
+                charCtx.drawImage(charCompCanvas, 0, 0);
+                charCtx.globalCompositeOperation = 'screen';
+                charCtx.globalAlpha = clamp(baseAlpha * 0.35 * alphaBoost, 0.06, 0.40);
+                charCtx.filter = 'blur(9px)';
+                charCtx.drawImage(charCompCanvas, -4, -4, 968, 608);
+                charCtx.filter = 'none';
+            } else {
+                const lightenAlpha   = type === 'extract' ? clamp(baseAlpha * 0.55 * alphaBoost, 0.06, 0.44) : clamp(baseAlpha * 1.35 * alphaBoost, 0.18, 0.78);
+                const screenLiftAlpha = clamp(baseAlpha * 0.45 * alphaBoost, 0.08, 0.38);
+                const contrastAlpha  = clamp(baseAlpha * 0.24 * (currentSaturationLevel === 'plus3' ? 1.1 : 1), 0.06, 0.24);
+                charCtx.globalCompositeOperation = 'lighten';
+                charCtx.globalAlpha = lightenAlpha;
+                charCtx.drawImage(charCompCanvas, 0, 0);
+                charCtx.globalCompositeOperation = 'screen';
+                charCtx.globalAlpha = screenLiftAlpha;
+                charCtx.drawImage(charCompCanvas, 0, 0);
+                charCtx.globalCompositeOperation = 'overlay';
+                charCtx.globalAlpha = contrastAlpha;
+                charCtx.drawImage(charCompCanvas, 0, 0);
+                charCtx.globalCompositeOperation = 'screen';
+                charCtx.globalAlpha = type === 'extract' ? clamp(baseAlpha * 0.22 * bloomBoost, 0, 0.38) : clamp(baseAlpha * 0.50 * bloomBoost, 0, 0.78);
+                charCtx.filter = `blur(${bloomBlur1}px)`;
+                charCtx.drawImage(charCompCanvas, -4, -4, 968, 608);
+                charCtx.globalAlpha = type === 'extract' ? clamp(baseAlpha * 0.12 * bloomBoost, 0, 0.22) : clamp(baseAlpha * 0.28 * bloomBoost, 0, 0.50);
+                charCtx.filter = 'blur(22px)';
+                charCtx.drawImage(charCompCanvas, -12, -12, 984, 624);
+                charCtx.filter = 'none';
+            }
+            charCtx.globalAlpha = 1.0;
+            charCtx.globalCompositeOperation = 'source-over';
+            charCtx.restore();
+        }
+
+        // ── 3. EDGE モード ────────────────────────────────────────────────
+        if (hasEdge) {
+            charCompCtx.clearRect(0, 0, 960, 600);
+            charCompCtx.globalCompositeOperation = 'source-over';
+            charCompCtx.filter = currentSaturationLevel === 'plus3'
+                ? `saturate(${getCurrentSaturationBoost()}) contrast(1.22) brightness(${getSatBrightComp()})`
+                : `saturate(${getCurrentSaturationBoost()}) contrast(1.1) brightness(${(1.2 * getSatBrightComp()).toFixed(3)})`;
+            charCompCtx.drawImage(edgeHoloCanvas, 0, 0);
+            charCompCtx.filter = 'none';
+            charCompCtx.globalCompositeOperation = 'destination-in';
+            charCompCtx.drawImage(charEdgeCanvas, 0, 0);
+            charCompCtx.globalCompositeOperation = 'source-over';
+            const _ea = OPACITY_MAP['extract'][currentIntensityLevel];
+            const _ab = alphaBoost;
+            charCtx.save();
+            charCtx.globalCompositeOperation = 'screen';
+            charCtx.globalAlpha = clamp(_ea * 1.8 * _ab, 0.22, 0.92);
+            charCtx.drawImage(charCompCanvas, 0, 0);
+            charCtx.globalCompositeOperation = 'overlay';
+            charCtx.globalAlpha = clamp(_ea * 0.55, 0.10, 0.42);
+            charCtx.drawImage(charCompCanvas, 0, 0);
+            charCtx.globalCompositeOperation = 'screen';
+            charCtx.globalAlpha = clamp(_ea * 0.40 * _ab, 0.10, 0.55);
+            charCtx.filter = 'blur(5px)';
+            charCtx.drawImage(charCompCanvas, 0, 0);
+            charCtx.filter = 'none';
+            charCtx.globalAlpha = 1; charCtx.globalCompositeOperation = 'source-over';
+            charCtx.restore();
+        }
+
+        updateCharDepth();
+        updateCharMesh();
+    }
+
+    document.getElementById('bgUpload').addEventListener('change', (e) => {
+        if (e.target.files[0]) loadBgImage(URL.createObjectURL(e.target.files[0]));
+    });
+    document.getElementById('charUpload').addEventListener('change', (e) => {
+        if (e.target.files[0]) loadCharImage(URL.createObjectURL(e.target.files[0]));
+    });
+
+    function calcPixelMaskAlpha(r, g, b, modes) {
+        let maxA = 0;
+        const min = Math.min(r, g, b), max = Math.max(r, g, b), sat = max - min;
+        for (const mode of modes) {
+            if (mode === 'all' || mode === 'edge') continue;
+            let a = 0;
+            if (mode === 'w') a = Math.max(0, Math.min(255, (min - 170) * 5));
+            else if (mode === 'k') a = Math.max(0, Math.min(255, (90 - max) * 5));
+            else if (mode === 'y') {
+                if (sat >= 30 && b <= Math.min(r, g) * 0.9) { const k2 = (r + g) / 2; a = Math.max(0, Math.min(255, (k2 - b) * 2.5)); }
+            } else {
+                if (sat >= 15) { const d = (mode==='r') ? r-(g+b)/2 : (mode==='g') ? g-(r+b)/2 : b-(r+g)/2; a = Math.max(0, Math.min(255, d * 4.5)); }
+            }
+            if (a > maxA) maxA = a;
+        }
+        return maxA;
+    }
+
+    function updateMask() {
+        if (!originalImageData) return;
+        const data = originalImageData.data, outImageData = maskCtx.createImageData(960, 600), out = outImageData.data;
+        const hasAll = maskModes.has('all');
+        const hasEdge = maskModes.has('edge');
+        const colorModes = new Set([...maskModes].filter(m => m !== 'all' && m !== 'edge'));
+        // カラーモードで全ピクセル過
+        for (let i = 0; i < data.length; i += 4) {
+            const a = hasAll ? 255 : (colorModes.size > 0 ? calcPixelMaskAlpha(data[i], data[i+1], data[i+2], colorModes) : 0);
+            out[i]=out[i+1]=out[i+2]=255; out[i+3]=a;
+        }
+        // EDGEモードでmax合成
+        if (hasEdge) {
+            const edgeImageData = edgeCtx.createImageData(960, 600);
+            const eOut = edgeImageData.data;
+            for (let y = 1; y < 599; y++) for (let x = 1; x < 959; x++) {
+                const i = (y * 960 + x) * 4;
+                const getLum = (idx) => (data[idx]*0.3 + data[idx+1]*0.59 + data[idx+2]*0.11);
+                const diff = Math.abs(getLum(i) - getLum(i+4)) + Math.abs(getLum(i) - getLum(i+960*4));
+                const edgeA = Math.max(0, Math.min(255, diff * 1.8));
+                if (edgeA > out[i+3]) out[i+3] = edgeA;
+                eOut[i] = eOut[i+1] = eOut[i+2] = 255; eOut[i+3] = edgeA;
+            }
+            edgeCtx.putImageData(edgeImageData, 0, 0);
+        }
+        maskCtx.putImageData(outImageData, 0, 0);
+        draw();
+    }
+
+    function draw() {
+        mCtx.clearRect(0, 0, 960, 600);
+        const isPrism = currentShape === 'prism';
+        // EDGEが有効の場合、90°回転チルトで別角度ホログラムを事前レンダリング
+        if (maskModes.has('edge')) {
+            drawHologramBuffer(-currentTiltY, currentTiltX);
+            edgeHoloCtx.clearRect(0, 0, 960, 600);
+            edgeHoloCtx.drawImage(holoCanvas, 0, 0);
+        }
+        drawHologramBuffer(currentTiltX, currentTiltY);
+
+        if (isPrism) {
+            // ◈: NewFile_holo.html方式
+            mCtx.fillStyle = '#000';
+            mCtx.fillRect(0, 0, 960, 600);
+            mCtx.filter = `saturate(${getCurrentSaturationBoost()}) brightness(${(0.86 * getSatBrightComp()).toFixed(3)})`;
+            mCtx.drawImage(applyMonotone(holoCanvas), 0, 0);
+            mCtx.filter = 'none';
+
+            // EDGE強調: 90°回転チルトのプリズムをエッジ領域にscreen合成
+            if (maskModes.has('edge')) {
+                cCtx.clearRect(0, 0, 960, 600);
+                cCtx.globalCompositeOperation = 'source-over';
+                cCtx.filter = `saturate(${getCurrentSaturationBoost()}) contrast(1.1) brightness(${(1.2 * getSatBrightComp()).toFixed(3)})`;
+                cCtx.drawImage(edgeHoloCanvas, 0, 0);
+                cCtx.filter = 'none';
+                cCtx.globalCompositeOperation = 'destination-in';
+                cCtx.drawImage(edgeCanvas, 0, 0);
+                cCtx.globalCompositeOperation = 'source-over';
+                // screen合成でエッジに別角度の光を重ねる
+                mCtx.globalCompositeOperation = 'screen';
+                mCtx.globalAlpha = 0.55;
+                mCtx.drawImage(compCanvas, 0, 0);
+                // グローパス（狭）
+                mCtx.globalAlpha = 0.30;
+                mCtx.filter = 'blur(5px)';
+                mCtx.drawImage(compCanvas, 0, 0);
+                // グローパス（広）プリズム+EDGE時のエッジ幅拡張
+                mCtx.globalAlpha = 0.18;
+                mCtx.filter = 'blur(18px)';
+                mCtx.drawImage(compCanvas, 0, 0);
+                mCtx.filter = 'none';
+                mCtx.globalCompositeOperation = 'source-over';
+                mCtx.globalAlpha = 1.0;
+            }
+            drawChar();
+            if (three3D) three3D.colorTexture.needsUpdate = true;  // BG canvas が更新された
+            return;
+        }
+
+        // 他の質感: 元画像の上にホログラムをオーバーレイ
+        const type = maskModes.has('all') ? 'all' : 'extract';
+        const baseAlpha = OPACITY_MAP[type][currentIntensityLevel];
+
+        if (baseImage) {
+            if (currentMonoMode === 'off') {
+                mCtx.drawImage(baseImage, imageRect.x, imageRect.y, imageRect.w, imageRect.h);
+            } else {
+                // モノトーン: 白黒画像を先に描画
+                const tmpMono = document.createElement('canvas');
+                tmpMono.width = 960; tmpMono.height = 600;
+                tmpMono.getContext('2d').drawImage(baseImage, imageRect.x, imageRect.y, imageRect.w, imageRect.h);
+                mCtx.drawImage(applyMonotone(tmpMono), 0, 0);
+            }
+        }
+
+        cCtx.clearRect(0, 0, 960, 600);
+        cCtx.globalCompositeOperation = 'source-over';
+        cCtx.filter = currentSaturationLevel === 'plus3'
+            ? `saturate(${getCurrentSaturationBoost()}) contrast(1.22) brightness(${getSatBrightComp()})`
+            : `saturate(${getCurrentSaturationBoost()}) brightness(${getSatBrightComp()})`;
+        cCtx.drawImage(holoCanvas, 0, 0);
+        cCtx.filter = 'none';
+        if (!maskModes.has('all')) { cCtx.globalCompositeOperation = 'destination-in'; cCtx.drawImage(maskCanvas, 0, 0); }
+
+        mCtx.save();
+        const alphaBoost = currentSaturationLevel === 'plus3' ? 1.18 : 1;
+
+        if (currentMonoMode !== 'off') {
+            // モノトーン合成: 白部→multiply でホログラム色を乗せる、黒部→screen で薄く発色
+            // 1. multiply: 白い部分にホログラム色が乗る（黒は黒のまま）
+            mCtx.globalCompositeOperation = 'multiply';
+            mCtx.globalAlpha = clamp(type === 'extract'
+                ? baseAlpha * 3.0 * alphaBoost
+                : baseAlpha * 5.0 * alphaBoost, 0.30, 1.0);
+            mCtx.drawImage(compCanvas, 0, 0);
+            // 2. screen: 黒い部分にもホログラムの色を薄く滲ませる
+            mCtx.globalCompositeOperation = 'screen';
+            mCtx.globalAlpha = clamp(type === 'extract'
+                ? baseAlpha * 1.0 * alphaBoost
+                : baseAlpha * 1.8 * alphaBoost, 0.10, 0.55);
+            mCtx.drawImage(compCanvas, 0, 0);
+            // 3. bloom
+            mCtx.globalAlpha = clamp(baseAlpha * 0.35 * alphaBoost, 0.06, 0.40);
+            mCtx.filter = 'blur(9px)';
+            mCtx.drawImage(compCanvas, -4, -4, 968, 608);
+            mCtx.filter = 'none';
+            mCtx.globalCompositeOperation = 'source-over';
+            mCtx.globalAlpha = 1.0;
+        } else {
+        // 通常合成
+        const lightenAlpha = type === 'extract'
+            ? clamp(baseAlpha * 0.55 * alphaBoost, 0.06, 0.44)
+            : clamp(baseAlpha * 1.35 * alphaBoost, 0.18, 0.78);
+        const screenLiftAlpha = clamp(baseAlpha * 0.45 * alphaBoost, 0.08, 0.38);
+        const contrastAlpha = clamp(baseAlpha * 0.24 * (currentSaturationLevel === 'plus3' ? 1.1 : 1), 0.06, 0.24);
+        mCtx.globalCompositeOperation = 'lighten';
+        mCtx.globalAlpha = lightenAlpha;
+        mCtx.drawImage(compCanvas, 0, 0);
+        mCtx.globalCompositeOperation = 'screen';
+        mCtx.globalAlpha = screenLiftAlpha;
+        mCtx.drawImage(compCanvas, 0, 0);
+        mCtx.globalCompositeOperation = 'overlay';
+        mCtx.globalAlpha = contrastAlpha;
+        mCtx.drawImage(compCanvas, 0, 0);
+        // ブルーム（光輝グロー）パス - 2パス強化
+        const bloomBoost = currentSaturationLevel === 'plus3' ? 1.16 : 1;
+        const bloomBlur1 = currentSaturationLevel === 'plus3' ? 5.5 : 7;
+        mCtx.globalCompositeOperation = 'screen';
+        mCtx.globalAlpha = type === 'extract'
+            ? clamp(baseAlpha * 0.22 * bloomBoost, 0, 0.38)
+            : clamp(baseAlpha * 0.50 * bloomBoost, 0, 0.78);
+        mCtx.filter = `blur(${bloomBlur1}px)`;
+        mCtx.drawImage(compCanvas, -4, -4, 968, 608);
+        mCtx.globalAlpha = type === 'extract'
+            ? clamp(baseAlpha * 0.12 * bloomBoost, 0, 0.22)
+            : clamp(baseAlpha * 0.28 * bloomBoost, 0, 0.50);
+        mCtx.filter = 'blur(22px)';
+        mCtx.drawImage(compCanvas, -12, -12, 984, 624);
+        mCtx.filter = 'none';
+        } // end if mono else
+        mCtx.restore();
+
+        // EDGEホログラム: 90°回転チルトの光をエッジに追加合成
+        if (maskModes.has('edge') && !maskModes.has('all')) {
+            cCtx.clearRect(0, 0, 960, 600);
+            cCtx.globalCompositeOperation = 'source-over';
+            cCtx.filter = currentSaturationLevel === 'plus3'
+                ? `saturate(${getCurrentSaturationBoost()}) contrast(1.22) brightness(${getSatBrightComp()})`
+                : `saturate(${getCurrentSaturationBoost()}) brightness(${getSatBrightComp()})`;
+            cCtx.drawImage(edgeHoloCanvas, 0, 0);
+            cCtx.filter = 'none';
+            cCtx.globalCompositeOperation = 'destination-in';
+            cCtx.drawImage(edgeCanvas, 0, 0);
+            cCtx.globalCompositeOperation = 'source-over';
+            mCtx.save();
+            mCtx.globalCompositeOperation = 'screen';
+            mCtx.globalAlpha = clamp(baseAlpha * 1.8 * alphaBoost, 0.22, 0.92);
+            mCtx.drawImage(compCanvas, 0, 0);
+            mCtx.globalCompositeOperation = 'overlay';
+            mCtx.globalAlpha = clamp(baseAlpha * 0.55, 0.10, 0.42);
+            mCtx.drawImage(compCanvas, 0, 0);
+            mCtx.restore();
+        }
+        drawChar();
+        if (three3D) three3D.colorTexture.needsUpdate = true;  // BG canvas が更新された
+    }
+
+    // 各種データ生成
+    const sandParticles = [];
+    for (let i = 0; i < 20000; i++) sandParticles.push({ x: Math.random()*960, y: Math.random()*600, phase: Math.random()*Math.PI*2, size: Math.random()*6+3, hO: Math.random()*60-30 });
+    // bump用 金銀凹凸データ（巨大３個固定・ここにランダムHLスポットも内包）
+    function makeHL() {
+        return Array.from({length: 5}, (_, i) => {
+            const isCounter = i >= 3; // 後半2個は暗部でも光る逆ドリフト
+            return {
+                rx: (Math.random()-0.5)*1.9,
+                ry: (Math.random()-0.5)*1.9,
+                drift: isCounter ? -(0.6 + Math.random()*0.8) : (Math.random()*1.4),
+                str:  0.50 + Math.random()*0.50,
+                selfGlow: isCounter ? 0.50 : 0.22
+            };
+        });
+    }
+    function makeShape() {
+        // 有機的ブロブ形状：各方向の半径を不規則に変化させる
+        return Array.from({length: 11}, () => 0.75 + Math.random() * 0.60);
+    }
+    function blobPath(ctx, cx, cy, R, shape) {
+        const n = shape.length;
+        const pts = shape.map((r, i) => {
+            const a = (i / n) * Math.PI * 2 - Math.PI * 0.5;
+            return { x: cx + Math.cos(a) * R * r, y: cy + Math.sin(a) * R * r };
+        });
+        ctx.beginPath();
+        for (let i = 0; i < n; i++) {
+            const p0 = pts[(i-1+n)%n], p1 = pts[i], p2 = pts[(i+1)%n], p3 = pts[(i+2)%n];
+            if (i === 0) ctx.moveTo(p1.x, p1.y);
+            ctx.bezierCurveTo(
+                p1.x + (p2.x-p0.x)/6, p1.y + (p2.y-p0.y)/6,
+                p2.x - (p3.x-p1.x)/6, p2.y - (p3.y-p1.y)/6,
+                p2.x, p2.y
+            );
+        }
+        ctx.closePath();
+    }
+    function starPath(ctx, cx, cy, outer, inner, n, rot) {
+        ctx.beginPath();
+        for (let i = 0; i < n * 2; i++) {
+            const r = i % 2 === 0 ? outer : inner;
+            const a = rot + (i / (n * 2)) * Math.PI * 2 - Math.PI * 0.5;
+            i === 0 ? ctx.moveTo(cx + Math.cos(a)*r, cy + Math.sin(a)*r)
+                    : ctx.lineTo(cx + Math.cos(a)*r, cy + Math.sin(a)*r);
+        }
+        ctx.closePath();
+    }
+    const bumpLarge = [
+        { baseX: 190, baseY: 170, size: 600, ht: 1.0,  moveAngX: Math.random()*Math.PI*2, moveAngY: Math.random()*Math.PI*2, moveRange: 680, hls: makeHL(), shape: makeShape() },
+        { baseX: 760, baseY: 400, size: 620, ht: 0.92, moveAngX: Math.random()*Math.PI*2, moveAngY: Math.random()*Math.PI*2, moveRange: 650, hls: makeHL(), shape: makeShape() },
+        { baseX: 500, baseY: 300, size: 560, ht: 0.86, moveAngX: Math.random()*Math.PI*2, moveAngY: Math.random()*Math.PI*2, moveRange: 700, hls: makeHL(), shape: makeShape() },
+        { baseX: 700, baseY: 155, size: 590, ht: 0.90, moveAngX: Math.random()*Math.PI*2, moveAngY: Math.random()*Math.PI*2, moveRange: 660, hls: makeHL(), shape: makeShape() },
+    ];
+    const bumpMicro = []; // マイクロテクスチャ
+    for (let i = 0; i < 150; i++) {
+        bumpMicro.push({ x: Math.random()*960, y: Math.random()*600, size: 4+Math.random()*6, ht: 0.5+Math.random()*0.5 });
+    }
+
+    const stainedPolygons = [];
+    for(let i=0;i<20;i++) for(let j=0;j<15;j++){
+        const cw=48, ch=40, px=(i*cw+24)+(Math.random()-0.5)*38, py=(j*ch+20)+(Math.random()-0.5)*32;
+        const pts=[]; const r=30+Math.random()*20, bA=Math.random()*Math.PI*2;
+        for(let k=0;k<4;k++){ const a=bA+(k/4)*Math.PI*2+Math.random(); pts.push({x:px+Math.cos(a)*r,y:py+Math.sin(a)*r}); }
+        stainedPolygons.push({pts, ph:Math.random()*Math.PI*2, hs:Math.random()*360, tsx:0.6+Math.random()*1.8, tsy:0.6+Math.random()*1.8});
+    }
+    // ===== TCGホログラム用 セル別固有データ =====
+    const holoTriData = [];
+    for(let r=-1; r<18; r++) for(let col=-1; col<24; col++)
+        holoTriData.push({ hs: Math.random()*360, tsx: 0.6+Math.random()*1.8, tsy: 0.6+Math.random()*1.8, pof: Math.random()*Math.PI*2 });
+    const holoHexData = [];
+    for(let col=-1; col<20; col++) for(let r=-1; r<12; r++)
+        holoHexData.push({ hs: Math.random()*360, tsx: 0.6+Math.random()*1.8, tsy: 0.6+Math.random()*1.8, pof: Math.random()*Math.PI*2 });
+    const holoSqData = [];
+    for(let r=0; r<14; r++) for(let col=0; col<22; col++)
+        holoSqData.push({ hs: Math.random()*360, tsx: 0.6+Math.random()*1.8, tsy: 0.6+Math.random()*1.8, pof: Math.random()*Math.PI*2 });
+
+    // ★ポップスター
+    const starParticles = [];
+    for (let i = 0; i < 120; i++) starParticles.push({ x: Math.random()*960, y: Math.random()*600, outer: 8+Math.random()*26, ratio: 0.24+Math.random()*0.28, pts: Math.random()>0.4?5:4, rot: Math.random()*Math.PI, phase: Math.random()*Math.PI*2, hO: (i/120)*360, large: true,  dbl: Math.random()>0.40, stroke: Math.random()>0.55 });
+    for (let i = 0; i < 700; i++) starParticles.push({ x: Math.random()*960, y: Math.random()*600, outer: 1.5+Math.random()*10, ratio: 0.30+Math.random()*0.18, pts: Math.random()>0.5?5:4, rot: Math.random()*Math.PI, phase: Math.random()*Math.PI*2, hO: Math.random()*360, large: false, dbl: Math.random()>0.50, stroke: Math.random()>0.50 });
+
+    function getModeColor(hueOffset, align, baseHue, brightnessOverride = null) {
+        let h, s, l;
+        const targetL = brightnessOverride !== null ? brightnessOverride : (50 + align * 20);
+        if (currentMode === 'none') { return `hsl(0, 0%, ${Math.max(0, Math.min(100, targetL))}%)`; }
+        if (currentMode === 'gold') {
+            const lv = Math.max(0, Math.min(100, targetL + align * 12));
+            // 暗部→アンバー(h36)、中間→ゴールド(h46)、輝点→淡金(h52)に自然遷移
+            h = 46 + hueOffset * 0.06 + (50 - Math.min(90, Math.max(30, lv))) * 0.22;
+            // 輝点付近で彩度を落として白に近づける（本物の金属ハイライト）
+            s = Math.max(0, 98 - Math.pow(Math.max(0, lv - 64), 2.0) * 0.08);
+            l = lv;
+        }
+        else if (currentMode === 'silver') {
+            const lv = Math.max(0, Math.min(100, targetL));
+            // スチールブルー：中間調でもっとも彩度が高く、輝点・暗部で無彩色に近づく
+            h = 212;
+            s = Math.max(0, 28 - Math.abs(lv - 44) * 0.56);
+            l = lv;
+        }
+        else if (currentMode === 'premium') {
+            h = baseHue + hueOffset;
+            const f = Math.pow(Math.max(0, align), 10);
+            if(f > 0.05) { s = f * 100; l = targetL + f * 20; } else { s = 0; l = targetL; }
+        } else { h = baseHue + hueOffset; s = 80; l = targetL; }
+        return `hsl(${h}, ${s}%, ${l}%)`;
+    }
+
+    // TCGホログラム用ヘルパー: セル固有色相計算
+    function getCellHue(d, tiltX, tiltY) {
+        return ((d.hs + tiltX * d.tsx * 320 + tiltY * d.tsy * 320) % 360 + 360) % 360;
+    }
+    // TCGホログラム用ヘルパー: 色相+明度からモード対応色を返す
+    function getHoloFaceColor(h, l) {
+        const lc = Math.max(0, Math.min(100, l));
+        if (currentMode === 'none') return `hsl(0,0%,${lc}%)`;
+        if (currentMode === 'gold') {
+            const gh = 42 + Math.max(0, lc - 52) * 0.14;
+            const gs = Math.max(8, 92 - Math.pow(Math.max(0, lc - 62), 1.5) * 2.2);
+            return `hsl(${gh},${gs}%,${lc}%)`;
+        }
+        if (currentMode === 'silver') {
+            // 銀：中間調をスチールブルー、輝点は冷白、暗部はほぼ無彩色
+            const dist = Math.abs(lc - 52);
+            const gs = Math.max(0, 32 - dist * 0.55);
+            return `hsl(212,${gs}%,${lc}%)`;
+        }
+        if (currentMode === 'premium') {
+            // PREM：明部はシルバー化、中間調は高彩度スペクトル
+            if (lc > 70) {
+                const sv = Math.max(0, 22 - (lc - 70) * 0.7);
+                return `hsl(210,${sv}%,${lc}%)`;
+            }
+            return `hsl(${h % 360},100%,${lc}%)`;
+        }
+        // rainbow
+        return `hsl(${h % 360},96%,${lc}%)`;
+    }
+
+    function drawSplit(c, p, cx, cy, a, c1, c2) { 
+        c.save(); c.beginPath(); p(); c.closePath(); c.clip(); c.fillStyle=c1; c.fill();
+        c.translate(cx,cy); c.rotate(a); c.fillStyle=c2; c.fillRect(-100,0,200,200); c.restore(); 
+    }
+
+    function drawHologramBuffer(tiltX, tiltY) {
+        hCtx.clearRect(0, 0, 960, 600);
+        const bh = (tiltX * 180 + tiltY * 180 + 360) % 360, sa = (tiltX * 6 + tiltY * 4) * Math.PI, ff = Math.pow(Math.cos(sa), 8);
+        
+        if (currentShape === 'sand') {
+            const gt = tiltX * 15 + tiltY * 15;
+            const isMetallic = currentMode === 'gold' || currentMode === 'silver';
+            hCtx.fillStyle = isMetallic
+                ? (currentMode==='gold' ? `hsl(40, 50%, 5%)` : `hsl(218, 14%, 5%)`)
+                : `hsl(${bh}, 30%, 15%)`;
+            hCtx.fillRect(0, 0, 960, 600);
+            // 金銀は閾値を下げて常時高密度に輝かせる（チルトのみ依存・時間不変）
+            const threshold = isMetallic ? 0.70 : 0.85;
+            for (let p of sandParticles) {
+                const al = Math.cos(gt + p.phase);
+                if (al > threshold) {
+                    const norm = (al - threshold) / (1 - threshold);
+                    const f = isMetallic ? Math.pow(norm, 2.5) : Math.pow(al, 15);
+                    let h, s, l;
+                    if(currentMode==='gold'){
+                        const lv = 28 + f * 72;
+                        h = 42 + p.hO * 0.13;
+                        s = Math.max(0, 99 - Math.pow(Math.max(0, lv - 62), 2.0) * 0.09);
+                        l = lv;
+                    } else if(currentMode==='silver'){
+                        const lv = 32 + f * 68;
+                        h = 212;
+                        s = Math.max(0, 26 - Math.abs(lv - 44) * 0.52);
+                        l = lv;
+                    } else { h=bh+p.hO; s=(currentMode==='none')?0:(currentMode==='premium'&&f>0.5)?100:80; l=40+f*60; }
+                    hCtx.fillStyle = `hsla(${h}, ${s}%, ${Math.min(100,l+10)}%, ${f})`;
+                    hCtx.fillRect(p.x, p.y, p.size, p.size);
+                }
+            }
+        } else if (currentShape === 'bump') {
+            const cx2 = 480 + tiltX * 120, cy2 = 300 + tiltY * 80;
+            if (currentMode === 'gold' || currentMode === 'silver') {
+                const isGold = currentMode === 'gold';
+                // ベース（極暗）
+                hCtx.fillStyle = isGold ? `hsl(34,55%,8%)` : `hsl(214,8%,9%)`;
+                hCtx.fillRect(0, 0, 960, 600);
+                // ライト方向（チルト由来のみ。時間不変）
+                const lx = tiltX, ly = tiltY;
+                const lDist = Math.sqrt(lx*lx + ly*ly);
+                const hlStr = 0.42 + lDist * 0.58;
+                // アンビエント（チルト追従ラジアル）
+                const ambGrad = hCtx.createRadialGradient(cx2, cy2, 0, cx2, cy2, 780);
+                if (isGold) {
+                    ambGrad.addColorStop(0,    `hsla(44,78%,36%,0.90)`);
+                    ambGrad.addColorStop(0.55, `hsla(40,68%,22%,0.55)`);
+                    ambGrad.addColorStop(1,    `hsla(36,55%,7%,0)`);
+                } else {
+                    ambGrad.addColorStop(0,    `hsla(214,16%,33%,0.80)`);
+                    ambGrad.addColorStop(0.55, `hsla(216,10%,19%,0.48)`);
+                    ambGrad.addColorStop(1,    `hsla(218,6%,7%,0)`);
+                }
+                hCtx.fillStyle = ambGrad; hCtx.fillRect(0, 0, 960, 600);
+
+                // === 大波：曲線移動（tiltX/Y を独立ベクトルで合成 → 曲線軌跡）+ マージ対応 ===
+                const bumpPos = bumpLarge.map(bp => ({
+                    bx: bp.baseX + Math.cos(bp.moveAngX)*lx*bp.moveRange*bp.ht + Math.cos(bp.moveAngY)*ly*bp.moveRange*bp.ht,
+                    by: bp.baseY + Math.sin(bp.moveAngX)*lx*bp.moveRange*bp.ht + Math.sin(bp.moveAngY)*ly*bp.moveRange*bp.ht,
+                }));
+                // マージ接続：凹凸が接近したときつなぐグロー（金属が溶け合うような表現）
+                for (let i = 0; i < bumpPos.length; i++) {
+                    for (let j = i+1; j < bumpPos.length; j++) {
+                        const pi = bumpPos[i], pj = bumpPos[j];
+                        const Ri = bumpLarge[i].size, Rj = bumpLarge[j].size;
+                        const dx = pj.bx - pi.bx, dy = pj.by - pi.by;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        const thresh = (Ri + Rj) * 0.40;
+                        if (dist < thresh && dist > 1) {
+                            const t = Math.pow(1 - dist/thresh, 1.5);
+                            const mx = (pi.bx+pj.bx)*0.5, my = (pi.by+pj.by)*0.5;
+                            const neckH = Math.min(Ri, Rj) * 0.48 * t;
+                            hCtx.save();
+                            hCtx.translate(mx, my); hCtx.rotate(Math.atan2(dy, dx));
+                            const nkG = hCtx.createLinearGradient(-dist*0.5, 0, dist*0.5, 0);
+                            if (isGold) {
+                                nkG.addColorStop(0,   `hsla(44,78%,20%,${t*0.65})`);
+                                nkG.addColorStop(0.5, `hsla(47,72%,36%,${t*0.52})`);
+                                nkG.addColorStop(1,   `hsla(44,78%,20%,${t*0.65})`);
+                            } else {
+                                nkG.addColorStop(0,   `hsla(214,17%,20%,${t*0.55})`);
+                                nkG.addColorStop(0.5, `hsla(214,14%,32%,${t*0.44})`);
+                                nkG.addColorStop(1,   `hsla(214,17%,20%,${t*0.55})`);
+                            }
+                            hCtx.beginPath(); hCtx.ellipse(0, 0, dist*0.5+2, neckH, 0, 0, Math.PI*2);
+                            hCtx.fillStyle = nkG; hCtx.fill(); hCtx.restore();
+                        }
+                    }
+                }
+                // 各バンプ描画
+                for (let bi = 0; bi < bumpLarge.length; bi++) {
+                    const bp = bumpLarge[bi];
+                    const { bx, by } = bumpPos[bi];
+                    const R = bp.size;
+                    // シャドウ（実光源方向 lx/ly に対して影側）
+                    const sx = bx - lx * R * 0.22, sy = by - ly * R * 0.22;
+                    const shGrad = hCtx.createRadialGradient(sx, sy, 0, bx, by, R * 1.7);
+                    shGrad.addColorStop(0, isGold ? `hsla(26,60%,0%,0.52)` : `hsla(214,12%,0%,0.44)`);
+                    shGrad.addColorStop(0.45, isGold ? `hsla(28,48%,1%,0.22)` : `hsla(214,8%,1%,0.18)`);
+                    shGrad.addColorStop(1, `hsla(0,0%,0%,0)`);
+                    blobPath(hCtx, bx, by, R*1.7, bp.shape); hCtx.fillStyle=shGrad; hCtx.fill();
+                    // ランダム複数ハイライトスポット
+                    for (const hl of bp.hls) {
+                        const hx = bx + hl.rx * R * 0.44 + lx * R * hl.drift * 0.18;
+                        const hy = by + hl.ry * R * 0.44 + ly * R * hl.drift * 0.18;
+                        const hR = R * (0.88 + hl.str * 0.48);
+                        const baseStr = hl.selfGlow + hlStr * hl.str * 0.65;
+                        const hlGrad = hCtx.createRadialGradient(hx, hy, 0, hx, hy, hR);
+                        if (isGold) {
+                            hlGrad.addColorStop(0,    `hsla(52,8%,100%,${baseStr*0.94})`);
+                            hlGrad.addColorStop(0.14, `hsla(50,48%,95%,${baseStr*0.78})`);
+                            hlGrad.addColorStop(0.32, `hsla(47,82%,72%,${baseStr*0.55})`);
+                            hlGrad.addColorStop(0.60, `hsla(44,78%,42%,${baseStr*0.26})`);
+                            hlGrad.addColorStop(1,    `hsla(40,60%,12%,0)`);
+                        } else {
+                            hlGrad.addColorStop(0,    `hsla(208,5%,100%,${baseStr*0.86})`);
+                            hlGrad.addColorStop(0.14, `hsla(210,9%,97%,${baseStr*0.70})`);
+                            hlGrad.addColorStop(0.32, `hsla(214,14%,76%,${baseStr*0.48})`);
+                            hlGrad.addColorStop(0.60, `hsla(214,11%,44%,${baseStr*0.22})`);
+                            hlGrad.addColorStop(1,    `hsla(214,6%,12%,0)`);
+                        }
+                        hCtx.beginPath(); hCtx.arc(hx, hy, hR, 0, Math.PI*2); hCtx.fillStyle=hlGrad; hCtx.fill();
+                    }
+                }
+
+                // === マイクロテクスチャ（四角点・チルト追従） ===
+                for (const bp of bumpMicro) {
+                    const hx = bp.x + lx * bp.size * 0.9 * bp.ht;
+                    const hy = bp.y + ly * bp.size * 0.9 * bp.ht;
+                    hCtx.fillStyle = isGold ? `hsla(52,28%,96%,${hlStr*0.38})` : `hsla(208,7%,97%,${hlStr*0.34})`;
+                    hCtx.fillRect(hx - bp.size*0.4, hy - bp.size*0.4, bp.size*0.8, bp.size*0.8);
+                }
+            } else {
+                const dist = Math.sqrt(tiltX**2 + tiltY**2);
+                hCtx.fillStyle = `hsl(${bh}, 15%, 10%)`; hCtx.fillRect(0, 0, 960, 600);
+                let h = bh, s = 85, l = 60 + dist * 20;
+                if (currentMode === 'none') { h = 0; s = 0; }
+                else if (currentMode === 'premium') { const f = Math.pow(Math.cos(sa), 8); if (f > 0.05) { s = f * 100; l = Math.min(100, l + f * 15); } }
+                const grad = hCtx.createRadialGradient(cx2, cy2, 0, cx2, cy2, 550);
+                grad.addColorStop(0, `hsla(${h}, ${s}%, ${l}%, 0.95)`);
+                grad.addColorStop(0.5, `hsla(${h + 10}, ${s}%, ${l - 20}%, 0.6)`);
+                grad.addColorStop(1, `hsla(${h + 10}, ${s}%, ${l - 40}%, 0)`);
+                hCtx.fillStyle = grad; hCtx.fillRect(0, 0, 960, 600);
+            }
+        } else if (currentShape === 'stained') {
+            const gt = tiltX * 8 + tiltY * 8;
+            for (const poly of stainedPolygons) {
+                const al = Math.cos(gt + poly.ph);
+                const polyHue = getCellHue(poly, tiltX, tiltY);
+                const polyL = 50 + al * 28;
+                const n = poly.pts.length;
+                // 重心算出
+                const pcx = poly.pts.reduce((s, p) => s + p.x, 0) / n;
+                const pcy = poly.pts.reduce((s, p) => s + p.y, 0) / n;
+                // 各辺→重心の扇形面ごとにグラデーション（六角・四角と同品質）
+                for (let i = 0; i < n; i++) {
+                    const p1 = poly.pts[i], p2 = poly.pts[(i + 1) % n];
+                    const ex = (p1.x + p2.x) / 2, ey = (p1.y + p2.y) / 2;
+                    const fHue = (polyHue + i * (360 / n)) % 360;
+                    const fAl = Math.cos(gt + poly.ph + i * Math.PI * 2 / n);
+                    const fL = Math.max(18, Math.min(90, polyL + fAl * 22));
+                    hCtx.beginPath();
+                    hCtx.moveTo(pcx, pcy);
+                    hCtx.lineTo(p1.x, p1.y);
+                    hCtx.lineTo(p2.x, p2.y);
+                    hCtx.closePath();
+                    const fg = hCtx.createLinearGradient(pcx, pcy, ex, ey);
+                    fg.addColorStop(0, getHoloFaceColor(fHue,           fL + 20));
+                    fg.addColorStop(1, getHoloFaceColor((fHue + 65) % 360, fL - 16));
+                    hCtx.fillStyle = fg;
+                    hCtx.fill();
+                }
+            }
+        } 
+        else if (currentShape === 'prism') {
+            drawPrismFromImage(tiltX, tiltY, bh, sa);
+        }
+        // === TCGホログラム三角形（3面グラデーション） ===
+        else if (currentShape === 'triangle') {
+            const S = _isMobilePerf ? 72 : 45, H = S * 0.866;
+            let di = 0;
+            const triRows = _isMobilePerf ? 11 : 18, triCols = _isMobilePerf ? 14 : 24;
+            // 三角形を重心→各辺の3面に分割し、面ごとにグラデーション
+            const drawTriFaces = (pts3, chBase, lBase, d) => {
+                const tcx = (pts3[0].x + pts3[1].x + pts3[2].x) / 3;
+                const tcy = (pts3[0].y + pts3[1].y + pts3[2].y) / 3;
+                for (let fi = 0; fi < 3; fi++) {
+                    const p1 = pts3[fi], p2 = pts3[(fi + 1) % 3];
+                    const ex = (p1.x + p2.x) / 2, ey = (p1.y + p2.y) / 2;
+                    const fHue = (chBase + fi * 120) % 360;
+                    const fAl = Math.cos(sa - fi * Math.PI * 2 / 3 + d.pof);
+                    const fL = Math.max(18, Math.min(90, lBase + fAl * 22));
+                    hCtx.beginPath();
+                    hCtx.moveTo(tcx, tcy);
+                    hCtx.lineTo(p1.x, p1.y);
+                    hCtx.lineTo(p2.x, p2.y);
+                    hCtx.closePath();
+                    const fg = hCtx.createLinearGradient(tcx, tcy, ex, ey);
+                    fg.addColorStop(0, getHoloFaceColor(fHue,             fL + 20));
+                    fg.addColorStop(1, getHoloFaceColor((fHue + 60) % 360, fL - 16));
+                    hCtx.fillStyle = fg;
+                    hCtx.fill();
+                }
+            };
+            for(let r=-1; r<triRows; r++) for(let col=-1; col<triCols; col++) {
+                const d = holoTriData[(di++) % holoTriData.length];
+                const cx = col * S + (r % 2) * (S / 2), cy = r * H;
+                const ch = getCellHue(d, tiltX, tiltY);
+                const al = Math.cos(sa * 1.4 + d.pof);
+                const lBase = 50 + al * 22;
+                // 上向き三角
+                drawTriFaces([
+                    {x: cx,      y: cy + H},
+                    {x: cx + S/2, y: cy},
+                    {x: cx + S,  y: cy + H}
+                ], ch, lBase, d);
+                // 下向き三角: +150° hue シフト
+                drawTriFaces([
+                    {x: cx + S/2,   y: cy},
+                    {x: cx + S,     y: cy + H},
+                    {x: cx + S*1.5, y: cy}
+                ], (ch + 150) % 360, lBase, d);
+            }
+        }
+        else if (currentShape === 'hexagon') {
+            const R = 35;
+            let di = 0;
+            for (let col = -1; col < 20; col++) for (let r = -1; r < 12; r++) {
+                const d = holoHexData[di++];
+                const cx = col * R * 1.5, cy = r * R * 1.732 + (col % 2 ? R * 0.866 : 0);
+                const ch = getCellHue(d, tiltX, tiltY);
+                const alCell = Math.cos(sa * 1.4 + d.pof);
+                const lBase = 50 + alCell * 20;
+                for (let i = 0; i < 6; i++) {
+                    const a1 = i * Math.PI/3, a2 = (i+1) * Math.PI/3, mid = a1 + Math.PI/6;
+                    const fHue = (ch + i * 60) % 360; // 6面で全色相周回
+                    const fAl = Math.cos(sa - mid + d.pof);
+                    const fL = Math.max(18, Math.min(90, lBase + fAl * 18));
+                    hCtx.beginPath(); hCtx.moveTo(cx, cy);
+                    hCtx.lineTo(cx + R * Math.cos(a1), cy + R * Math.sin(a1));
+                    hCtx.lineTo(cx + R * Math.cos(a2), cy + R * Math.sin(a2));
+                    hCtx.closePath();
+                    const ex = cx + R * 0.85 * Math.cos(mid), ey = cy + R * 0.85 * Math.sin(mid);
+                    const fg = hCtx.createLinearGradient(cx, cy, ex, ey);
+                    fg.addColorStop(0,   getHoloFaceColor(fHue,          fL + 16));
+                    fg.addColorStop(1,   getHoloFaceColor((fHue+55)%360, fL - 14));
+                    hCtx.fillStyle = fg; hCtx.fill();
+                }
+            }
+        } else if (currentShape === 'square') {
+            const S = _isMobilePerf ? 72 : 45;
+            let di = 0;
+            const sqRows = _isMobilePerf ? 9 : 14, sqCols = _isMobilePerf ? 14 : 22;
+            for (let r = 0; r < sqRows; r++) for (let col = 0; col < sqCols; col++) {
+                const d = holoSqData[(di++) % holoSqData.length];
+                const x = col * S, y = r * S, cx = x + S/2, cy = y + S/2;
+                const ch = getCellHue(d, tiltX, tiltY);
+                const alCell = Math.cos(sa * 1.4 + d.pof);
+                const lBase = 50 + alCell * 20;
+                hCtx.save(); hCtx.beginPath(); hCtx.rect(x, y, S, S); hCtx.clip();
+                for (let i = 0; i < 8; i++) {
+                    const a1 = i * Math.PI/4, a2 = (i+1) * Math.PI/4, mid = a1 + Math.PI/8;
+                    const fHue = (ch + i * 45) % 360; // 8面で全色相周回
+                    const fAl = Math.cos(sa - mid + d.pof);
+                    const fL = Math.max(18, Math.min(90, lBase + fAl * 18));
+                    hCtx.beginPath(); hCtx.moveTo(cx, cy);
+                    hCtx.lineTo(cx + S * Math.cos(a1), cy + S * Math.sin(a1));
+                    hCtx.lineTo(cx + S * Math.cos(a2), cy + S * Math.sin(a2));
+                    hCtx.closePath();
+                    const ex = cx + S * 0.7 * Math.cos(mid), ey = cy + S * 0.7 * Math.sin(mid);
+                    const fg = hCtx.createLinearGradient(cx, cy, ex, ey);
+                    fg.addColorStop(0,   getHoloFaceColor(fHue,          fL + 16));
+                    fg.addColorStop(1,   getHoloFaceColor((fHue+50)%360, fL - 14));
+                    hCtx.fillStyle = fg; hCtx.fill();
+                }
+                hCtx.restore();
+            }
+        } else if (currentShape === 'star') {
+            const gt = tiltX * 10 + tiltY * 10;
+            for (const sp of starParticles) {
+                const al = Math.cos(gt + sp.phase);
+                let h;
+                if (currentMode === 'gold')   h = 44 + sp.hO * 0.04;
+                else if (currentMode === 'silver') h = 210 + sp.hO * 0.02;
+                else h = (bh + sp.hO) % 360;
+                if (sp.large) {
+                    const bright = 0.35 + al * 0.55;
+                    const R = sp.outer;
+                    if (sp.stroke) {
+                        // 枚線のみ星（太め）
+                        starPath(hCtx, sp.x, sp.y, R, R*sp.ratio, sp.pts, sp.rot);
+                        hCtx.lineWidth = Math.max(1.8, R * 0.16);
+                        hCtx.lineJoin = 'round';
+                        hCtx.strokeStyle = `hsla(${h}, 90%, ${65+bright*28}%, ${bright*0.95})`;
+                        hCtx.stroke();
+                    } else {
+                        starPath(hCtx, sp.x, sp.y, R, R*sp.ratio, sp.pts, sp.rot);
+                        const sg = hCtx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, R);
+                        sg.addColorStop(0,    `hsla(${h},  8%, 100%, ${bright})`);
+                        sg.addColorStop(0.28, `hsla(${h}, 84%,  82%, ${bright*0.82})`);
+                        sg.addColorStop(0.65, `hsla(${h}, 90%,  52%, ${bright*0.42})`);
+                        sg.addColorStop(1,    `hsla(${h}, 72%,  26%, 0)`);
+                        hCtx.save();
+                        hCtx.clip();
+                        hCtx.fillStyle = sg; hCtx.fillRect(sp.x - R, sp.y - R, R * 2, R * 2);
+                        hCtx.restore();
+                        // 二重星（内側に別角度の小さい星）
+                        if (sp.dbl) {
+                            const iR = R * 0.52;
+                            starPath(hCtx, sp.x, sp.y, iR, iR*sp.ratio, sp.pts, sp.rot + Math.PI/sp.pts);
+                            const sg2 = hCtx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, iR);
+                            sg2.addColorStop(0,    `hsla(${h}, 12%, 100%, ${bright*0.80})`);
+                            sg2.addColorStop(0.35, `hsla(${(h+28)%360}, 78%, 86%, ${bright*0.58})`);
+                            sg2.addColorStop(1,    `hsla(${(h+28)%360}, 70%, 44%, 0)`);
+                            hCtx.save();
+                            hCtx.clip();
+                            hCtx.fillStyle = sg2; hCtx.fillRect(sp.x - iR, sp.y - iR, iR * 2, iR * 2);
+                            hCtx.restore();
+                        }
+                    }
+                } else {
+                    if (al > -0.20) {
+                        const f = Math.max(0, (al + 0.20) / 1.20);
+                        if (sp.stroke) {
+                            starPath(hCtx, sp.x, sp.y, sp.outer, sp.outer*sp.ratio, sp.pts, sp.rot);
+                            hCtx.lineWidth = Math.max(0.8, sp.outer * 0.18);
+                            hCtx.lineJoin = 'round';
+                            hCtx.strokeStyle = `hsla(${h}, 90%, ${58+f*36}%, ${f*0.88})`;
+                            hCtx.stroke();
+                        } else {
+                            starPath(hCtx, sp.x, sp.y, sp.outer, sp.outer*sp.ratio, sp.pts, sp.rot);
+                            hCtx.fillStyle = `hsla(${h}, 84%, ${50+f*44}%, ${f*0.90})`;
+                            hCtx.fill();
+                            // 小星の二重星
+                            if (sp.dbl && f > 0.25) {
+                                starPath(hCtx, sp.x, sp.y, sp.outer*0.52, sp.outer*0.52*sp.ratio, sp.pts, sp.rot + Math.PI/sp.pts);
+                                hCtx.fillStyle = `hsla(${(h+30)%360}, 90%, ${62+f*30}%, ${f*0.70})`;
+                                hCtx.fill();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    const setGroupActive = (id, btns) => { btns.forEach(b => b.classList.remove('active')); document.getElementById(id).classList.add('active'); };
+    function syncMaskButtons() {
+        document.getElementById('btnMaskAll').classList.toggle('active', maskModes.has('all'));
+        ['R','G','B','Y','W','K','Edge'].forEach(m => document.getElementById('btnMask'+m).classList.toggle('active', maskModes.has(m.toLowerCase())));
+    }
+    document.getElementById('btnMaskAll').onclick = () => { maskModes = new Set(['all']); syncMaskButtons(); updateMask(); };
+    ['R','G','B','Y','W','K','Edge'].forEach(m => {
+        document.getElementById('btnMask'+m).onclick = () => {
+            const key = m.toLowerCase();
+            maskModes.delete('all');
+            if (maskModes.has(key)) maskModes.delete(key); else maskModes.add(key);
+            if (maskModes.size === 0) maskModes = new Set(['all']);
+            syncMaskButtons();
+            updateMask();
+        };
+    });
+
+    const _INT_LEVELS = ['1','2','3','4','5','6'];
+    function updateIntensity(lvl) {
+        currentIntensityLevel = lvl;
+        _INT_LEVELS.forEach(l => document.getElementById('btnInt'+l).classList.remove('active'));
+        document.getElementById('btnInt'+lvl).classList.add('active');
+        if (currentShape === 'prism') generatePosterLayers();
+        draw();
+    }
+    _INT_LEVELS.forEach(l => document.getElementById('btnInt'+l).onclick = () => updateIntensity(l));
+
+    const _SAT_LEVELS = ['0', 'plus', 'plus2', 'plus3'];
+    const _SAT_KEY = { '0': '0', plus: 'Plus', plus2: 'Plus2', plus3: 'Plus3' };
+    function updateSaturation(lvl) {
+        currentSaturationLevel = lvl;
+        _SAT_LEVELS.forEach(l => document.getElementById('btnSat'+_SAT_KEY[l]).classList.remove('active'));
+        document.getElementById('btnSat'+_SAT_KEY[lvl]).classList.add('active');
+        draw();
+    }
+    document.getElementById('btnSat0').onclick = () => updateSaturation('0');
+    document.getElementById('btnSatPlus').onclick = () => updateSaturation('plus');
+    document.getElementById('btnSatPlus2').onclick = () => updateSaturation('plus2');
+    document.getElementById('btnSatPlus3').onclick = () => updateSaturation('plus3');
+
+    const modeBtns = [btnRainbow, btnSilver, btnGold, btnPremium];
+    document.getElementById('btnRainbow').onclick = () => { currentMode='rainbow'; setGroupActive('btnRainbow',modeBtns); draw(); };
+    document.getElementById('btnSilver').onclick = () => { currentMode='silver'; setGroupActive('btnSilver',modeBtns); draw(); };
+    document.getElementById('btnGold').onclick = () => { currentMode='gold'; setGroupActive('btnGold',modeBtns); draw(); };
+    document.getElementById('btnPremium').onclick = () => { currentMode='premium'; setGroupActive('btnPremium',modeBtns); draw(); };
+
+    const shapeBtns = [btnTriangle,btnSquare,btnHexagon,btnStained,btnBump,btnSand,btnPrism,btnStar,document.getElementById('btnShapeOff')];
+    document.getElementById('btnTriangle').onclick = () => { currentShape='triangle'; setGroupActive('btnTriangle',shapeBtns); draw(); };
+    document.getElementById('btnSquare').onclick = () => { currentShape='square'; setGroupActive('btnSquare',shapeBtns); draw(); };
+    document.getElementById('btnHexagon').onclick = () => { currentShape='hexagon'; setGroupActive('btnHexagon',shapeBtns); draw(); };
+    document.getElementById('btnStained').onclick = () => { currentShape='stained'; setGroupActive('btnStained',shapeBtns); draw(); };
+    document.getElementById('btnBump').onclick = () => { currentShape='bump'; setGroupActive('btnBump',shapeBtns); draw(); };
+    document.getElementById('btnSand').onclick = () => { currentShape='sand'; setGroupActive('btnSand',shapeBtns); draw(); };
+    document.getElementById('btnPrism').onclick = () => { currentShape='prism'; setGroupActive('btnPrism',shapeBtns); generatePosterLayers(); draw(); };
+    document.getElementById('btnStar').onclick = () => { currentShape='star'; setGroupActive('btnStar',shapeBtns); draw(); };
+    document.getElementById('btnShapeOff').onclick = () => { currentShape='none'; setGroupActive('btnShapeOff',shapeBtns); draw(); };
+
+    const monoBtns = ['btnMonoOff','btnMonoGray','btnMonoBW1','btnMonoBW2','btnMonoBW3','btnMonoSk','btnMonoSkThin'];
+    function setMono(mode) {
+        currentMonoMode = mode;
+        monoBtns.forEach(id => document.getElementById(id).classList.remove('active'));
+        const idMap = { off:'Off', gray:'Gray', bw1:'BW1', bw2:'BW2', bw3:'BW3', sketch:'Sk', sketchthin:'SkThin' };
+        document.getElementById('btnMono' + idMap[mode]).classList.add('active');
+        draw();
+    }
+    document.getElementById('btnMonoOff').onclick     = () => setMono('off');
+    document.getElementById('btnMonoGray').onclick    = () => setMono('gray');
+    document.getElementById('btnMonoBW1').onclick     = () => setMono('bw1');
+    document.getElementById('btnMonoBW2').onclick     = () => setMono('bw2');
+    document.getElementById('btnMonoBW3').onclick     = () => setMono('bw3');
+    document.getElementById('btnMonoSk').onclick      = () => setMono('sketch');
+    document.getElementById('btnMonoSkThin').onclick  = () => setMono('sketchthin');
+    const scaleBtns = [document.getElementById('btnScale1'), document.getElementById('btnScale15'), document.getElementById('btnScale2')];
+    const scaleWrap = document.getElementById('scaleWrap');
+    function setScale(s) {
+        cont.style.transform = `scale(${s})`; scaleWrap.style.height = (300 * s) + 'px';
+        const tc = document.getElementById('threeContainer');
+        if (tc) { tc.style.width = (480 * s) + 'px'; tc.style.height = (300 * s) + 'px'; }
+        document.getElementById('threeWrap').style.height = (300 * s) + 'px';
+        if (three3D) { three3D.renderer.setSize(480 * s, 300 * s); three3D.camera.updateProjectionMatrix(); }
+    }
+    document.getElementById('btnScale1').onclick  = () => { setScale(1);   setGroupActive('btnScale1',  scaleBtns); };
+    document.getElementById('btnScale15').onclick = () => { setScale(1.5); setGroupActive('btnScale15', scaleBtns); };
+    document.getElementById('btnScale2').onclick  = () => { setScale(2);   setGroupActive('btnScale2',  scaleBtns); };
+
+    const cont = document.getElementById('cardContainer');
+
+    // ===== 2D / 3D 切り替え =====
+    function setDisplayMode(use3D) {
+        is3D = use3D;
+        const sw = document.getElementById('scaleWrap');
+        const tw = document.getElementById('threeWrap');
+        const btn = document.getElementById('btnToggle3D');
+        if (use3D) {
+            sw.style.display = 'none';
+            tw.style.display = 'flex';
+            if (!three3D) {
+                try { init3D(); }
+                catch(e) { console.warn('3D init failed:', e); setDisplayMode(false); return; }
+                // 2D時にキャラを読み込んでAI解析が完了したまままの場合、init3D後に改めて適用
+                if (_pendingAICharImg) { applyAIDepthFromCharImage(_pendingAICharImg); _pendingAICharImg = null; }
+            }
+            // three3D が既存でも必ずアニメループを再起動（2D→3D 切替で止まるバグ対策）
+            if (three3DAnimId) { cancelAnimationFrame(three3DAnimId); three3DAnimId = null; }
+            threeAnimate();
+            if (btn) { btn.textContent = '3D'; btn.classList.add('active'); }
+        } else {
+            sw.style.display = 'flex';
+            tw.style.display = 'none';
+            if (three3DAnimId) { cancelAnimationFrame(three3DAnimId); three3DAnimId = null; }
+            if (btn) { btn.textContent = '2D'; btn.classList.remove('active'); }
+        }
+        autoScaleCard();
+        scheduledDraw();
+    }
+
+    function autoScaleCard() {
+        const maxW = window.innerWidth - 16;
+        const s = Math.min(1, maxW / 480);
+        cont.style.transform = `scale(${s})`;
+        document.getElementById('scaleWrap').style.height = (300 * s) + 'px';
+        const tc = document.getElementById('threeContainer');
+        if (tc) { tc.style.width = (480 * s) + 'px'; tc.style.height = (300 * s) + 'px'; }
+        document.getElementById('threeWrap').style.height = (300 * s) + 'px';
+        if (three3D) {
+            three3D.renderer.setSize(480 * s, 300 * s);
+            three3D.camera.updateProjectionMatrix();
+
+        }
+    }
+    window.addEventListener('resize', autoScaleCard);
+
+    // RAF スケジューリング — マウスイベントが高頻度でも描画は表示リフレッシュに同期
+    let _rafPending = false;
+    function scheduledDraw() {
+        if (_rafPending) return;
+        _rafPending = true;
+        requestAnimationFrame(() => { _rafPending = false; draw(); });
+    }
+
+    const handleMove = (e) => {
+        if (e.touches && e.touches.length === 0) return;  // タッチ終了後の誤発火を防ぐ
+        if (returnAnim) clearInterval(returnAnim);
+        const activeEl = is3D ? document.getElementById('threeWrap') : cont;
+        const rect = activeEl.getBoundingClientRect();
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        const px = Math.max(-1, Math.min(1, (cx - (rect.left + rect.width / 2)) / (rect.width / 2)));
+        const py = Math.max(-1, Math.min(1, (cy - (rect.top + rect.height / 2)) / (rect.height / 2)));
+        currentTiltX = px; currentTiltY = py;
+        if (!is3D) {
+            const _tiltDeg = _isMobilePerf ? 18 : 25;
+            card.style.transition = 'none';
+            card.style.transform = `rotateX(${-py * _tiltDeg}deg) rotateY(${px * _tiltDeg}deg)`;
+            document.getElementById('cardEdgeTop').style.boxShadow = `inset ${-px * _tiltDeg}px ${-py * _tiltDeg}px 40px rgba(255,255,255,0.35), inset 0 0 0 1px rgba(255,255,255,0.15)`;
+            card.style.setProperty('--light-angle', `${Math.atan2(py, -px)*(180/Math.PI)}deg`);
+            card.style.setProperty('--light-intensity', Math.min(1, Math.sqrt(px*px + py*py)));
+        }
+        scheduledDraw();
+    };
+
+    const handleLeave = () => {
+        if (!is3D) {
+            card.style.transition = 'transform 0.5s ease-out'; card.style.transform = 'rotateX(0deg) rotateY(0deg)';
+            document.getElementById('cardEdgeTop').style.boxShadow = `inset 0 0 0 1px rgba(255,255,255,0.1)`;
+        }
+        returnAnim = setInterval(() => {
+            currentTiltX *= 0.85; currentTiltY *= 0.85; scheduledDraw();
+            if (Math.abs(currentTiltX) < 0.001) clearInterval(returnAnim);
+        }, 16);
+    };
+
+    cont.addEventListener('mousemove', handleMove); cont.addEventListener('mouseleave', handleLeave);
+    cont.addEventListener('touchmove', handleMove); cont.addEventListener('touchend', handleLeave);
+
+    let rawDepthData3D = null;
+    let three3D = null, three3DAnimId = null;
+    let current3DDepthKey = '0';
+    let currentChar3DDepthKey = '0';
+    const DISP_SCALE = { '0': 0, '05': 14, '1': 28, '2': 56, '3': 90 };
+
+    function init3D() {
+        if (three3D || typeof THREE === 'undefined') return;
+        try {
+        const container = document.getElementById('threeContainer');
+        const scene = new THREE.Scene();
+        // モバイル: FOV=30 → tan(15°)*560=150=カード半高さ → カードがcanvasをぴったり満たし変位頂点をcanvasがクリップ
+        // PC: FOV=35 → 元の視野角のまま（変更なし）
+        const camera = new THREE.PerspectiveCamera(_isMobilePerf ? 30 : 35, 480 / 300, 0.1, 3000);
+        camera.position.z = 560;
+        // alpha:true はモバイルブラウザ(iOS Safari/Chrome Android)でMSAAを無効化する
+        // → antialias:true を指定してもポリゴンエッジがジグザグになる既知の問題
+        // alpha:false にして setClearColor で背景を塗ることでMSAAを確実に有効化する
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(480, 300);
+        // モバイル: DPRの1.5倍スーパーサンプリング → CSS縮小でエッジをスムージング
+        // PC: DPR上限2のまま（変更なし）
+        renderer.setPixelRatio(_isMobilePerf
+            ? Math.min(window.devicePixelRatio * 1.5, 3)
+            : Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x000000, 1);  // 黒背景（body と同系色）
+        container.appendChild(renderer.domElement);
+
+        const depthCanvas3D = document.createElement('canvas');
+        depthCanvas3D.width = 960; depthCanvas3D.height = 600;
+        const depthCtx3D = depthCanvas3D.getContext('2d');
+
+        // アニソトロピックフィルタリング: カードが傾いたとき（斜め表示）のテクスチャ品質を最大化
+        // スマホは近距離で持つため、これがないと斜め方向でジャギが出やすい
+        const _maxAniso = renderer.capabilities.getMaxAnisotropy();
+
+        const colorTexture = new THREE.CanvasTexture(mainCanvas);
+        colorTexture.minFilter = THREE.LinearFilter;
+        colorTexture.anisotropy = _maxAniso;
+        const depthTexture = new THREE.CanvasTexture(depthCanvas3D);
+        depthTexture.minFilter = THREE.LinearFilter;
+
+        // 頂点数を多くしてエッジの変位ステップを細かくする（モバイル分岐なし）
+        const geometry = new THREE.PlaneGeometry(480, 300, 256, 160);
+        const material = new THREE.MeshStandardMaterial({
+            map: colorTexture,
+            displacementMap: depthTexture,
+            displacementScale: DISP_SCALE[current3DDepthKey],
+            wireframe: false,
+            roughness: 0.55,
+            metalness: 0.05,
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+
+        // キャラクターレイヤー（視差用）
+        const charColorTexture = new THREE.CanvasTexture(charCanvasEl);
+        charColorTexture.minFilter = THREE.LinearFilter;
+        charColorTexture.anisotropy = _maxAniso;  // 傾き時のエッジ品質向上
+        const charDepthCanvas3D = document.createElement('canvas');
+        charDepthCanvas3D.width = 960; charDepthCanvas3D.height = 600;
+        const charDepthCtx3D = charDepthCanvas3D.getContext('2d');
+        const charDepthTexture = new THREE.CanvasTexture(charDepthCanvas3D);
+        charDepthTexture.minFilter = THREE.LinearFilter;
+        charDepthTexture.anisotropy = _maxAniso;
+        // PCと同じ頂点数を使用
+        const charGeometry = new THREE.PlaneGeometry(480, 300, 256, 160); // BGと同じ頂点数で統一（自己オクルージョン防止）
+        const charMaterial = new THREE.MeshStandardMaterial({
+            map: charColorTexture,
+            displacementMap: charDepthTexture,
+            displacementScale: DISP_SCALE[currentChar3DDepthKey],
+            transparent: true,
+            alphaTest: _isMobilePerf ? 0 : 0.05,
+            depthWrite: _isMobilePerf ? false : true,
+            depthTest: true,
+            roughness: 0.55,   // BGと統一
+            metalness: 0.05,
+        });
+        const charMesh = new THREE.Mesh(charGeometry, charMaterial);
+        charMesh.position.z = charState.depth * 1.2;
+        charMesh.renderOrder = 1; // BG(renderOrder=0)より後に描画
+        scene.add(charMesh);
+
+        // モバイル: 環境光↓・指向性↑ → 変位による陰影を強調して立体感UP
+        scene.add(new THREE.AmbientLight(0xffffff, _isMobilePerf ? 0.45 : 0.65));
+        const dirLight = new THREE.DirectionalLight(0xffffff, _isMobilePerf ? 0.65 : 0.35);
+        dirLight.position.set(0, 0, 800);
+        scene.add(dirLight);
+
+        three3D = { scene, camera, renderer, mesh, material, colorTexture, depthTexture, depthCanvas3D, depthCtx3D, charMesh, charMaterial, charColorTexture, charDepthCanvas3D, charDepthCtx3D, charDepthTexture };
+
+
+        generateSyntheticDepth3D();
+        generateSyntheticCharDepth3D();
+        } catch(e) { console.warn('Three.js init error:', e); three3D = null; }
+    }
+
+    function updateCharMesh() {
+        if (!three3D) return;
+        three3D.charColorTexture.needsUpdate = true;
+        three3D.charMesh.position.z = charState.depth * 1.2;
+        // position.x/y は threeAnimate が lerp で担当するため直接代入しない
+        // （直接代入すると threeAnimate の lerp効果を毎フレーム上書きしてガタガタになる）
+    }
+
+
+    // ===== モバイル専用: 深度マップ平滑化 =====
+    // Dilation + ダウンサンプリングでExtrusion Artifactを除去
+    // PCはapplyDepthDilationをそのまま使用（品質維持）
+    // 深度マップのコントラスト圧縮（モバイル用）
+    // 深度値の極端な0/255を中間値に寄せて「崖」の高さを均一に抑制
+    // 黒いパーツ等のAI誤判断による急激な歪みを緩和する
+    function compressDepthRange(ctx, canvas, minVal = 80, maxVal = 200) {
+        const w = canvas.width, h = canvas.height;
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const d = imgData.data;
+        const range = maxVal - minVal;
+        for (let i = 0; i < d.length; i += 4) {
+            const v = d[i]; // R=G=B（グレースケール深度マップ）
+            d[i] = d[i+1] = d[i+2] = Math.round(minVal + (v / 255) * range);
+        }
+        ctx.putImageData(imgData, 0, 0);
+    }
+
+    function smoothAndAnchorDepth(ctx, canvas, isChar) {
+        const w = 960, h = 600;
+        const tmp = document.createElement('canvas');
+        tmp.width = w; tmp.height = h;
+        const tCtx = tmp.getContext('2d');
+        tCtx.drawImage(canvas, 0, 0);
+        tCtx.globalCompositeOperation = 'lighten';
+        const radius = isChar ? 28 : 16;
+        const dirs = 16;
+        for (let i = 0; i < dirs; i++) {
+            const angle = (i / dirs) * Math.PI * 2;
+            tCtx.drawImage(canvas, Math.cos(angle) * radius, Math.sin(angle) * radius);
+        }
+        const tinyW = isChar ? 30 : 48;
+        const tinyH = isChar ? 19 : 30;
+        const tiny = document.createElement('canvas');
+        tiny.width = tinyW; tiny.height = tinyH;
+        const tCtx2 = tiny.getContext('2d');
+        tCtx2.imageSmoothingEnabled = true;
+        tCtx2.drawImage(tmp, 0, 0, tinyW, tinyH);
+        ctx.clearRect(0, 0, w, h);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(tiny, 0, 0, w, h);
+    }
+
+        // ===== 深度マップ膨張処理（Dilation）=====
+    // Geminiの指摘: キャラシルエット境界の「崖ポリゴン」に輪郭ピクセルが
+    // 引き伸ばされてトゲになるExtrusion Artifactの根本対策
+    // 深度マップを外側に膨張させて「崖」を透明エリアに追い出す
+    // → 崖ポリゴンのテクセルがalpha=0になりalphaTestで破棄される
+    function applyDepthDilation(ctx, canvas) {
+        const radius = 12; // 960px空間での膨張半径（モバイルは大きめ）
+        const w = canvas.width, h = canvas.height;
+        const tmp = document.createElement('canvas');
+        tmp.width = w; tmp.height = h;
+        const tCtx = tmp.getContext('2d');
+        // ベースをコピー
+        tCtx.drawImage(canvas, 0, 0);
+        // 12方向にオフセット描画、lighten合成（各チャンネルmax）= Dilation
+        tCtx.globalCompositeOperation = 'lighten';
+        const dirs = 12;
+        for (let i = 0; i < dirs; i++) {
+            const angle = (i / dirs) * Math.PI * 2;
+            const dx = Math.round(Math.cos(angle) * radius);
+            const dy = Math.round(Math.sin(angle) * radius);
+            tCtx.drawImage(canvas, dx, dy);
+        }
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(tmp, 0, 0);
+    }
+
+        // ===== 深度マップ端クランプ =====
+    // 変位マップの外縁ピクセルが非ゼロだとカード輪郭の頂点が外側に飛び出してガタガタになる
+    // 端へ向かうほど深度値を 0 に落とすマスクを multiply 合成する
+    function applyDepthEdgeMask(ctx, canvas, margin = 80) {
+        // margin: canvasの端からフェードさせる幅（960px空間）
+        // 大きいmargin → 中央だけ盛り上がる「椀型」になる
+        // 小さいmargin（8程度） → メッシュ端の崖だけ消す
+        const maskCvs = document.createElement('canvas');
+        maskCvs.width = 960; maskCvs.height = 600;
+        const mCtx = maskCvs.getContext('2d');
+        // 黒塗りつぶし → 中央白矩形 → ブラーで端をなだらか
+        mCtx.fillStyle = '#000';
+        mCtx.fillRect(0, 0, 960, 600);
+        mCtx.fillStyle = '#fff';
+        mCtx.fillRect(margin, margin, 960 - margin * 2, 600 - margin * 2);
+        const blurCvs = document.createElement('canvas');
+        blurCvs.width = 960; blurCvs.height = 600;
+        const bCtx = blurCvs.getContext('2d');
+        bCtx.filter = `blur(${margin * 0.55}px)`;
+        bCtx.drawImage(maskCvs, 0, 0);
+        // multiply: 端の深度値を 0 に落とす
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.drawImage(blurCvs, 0, 0);
+        ctx.globalCompositeOperation = 'source-over';
+    }
+
+    function generateSyntheticDepth3D() {
+        if (!three3D) return;
+        const { depthCtx3D, depthCanvas3D, depthTexture } = three3D;
+        depthCtx3D.clearRect(0, 0, 960, 600);
+        if (originalImageData) {
+            const d = originalImageData.data;
+            const imgData = depthCtx3D.createImageData(960, 600);
+            const out = imgData.data;
+            for (let i = 0; i < d.length; i += 4) {
+                if (d[i + 3] < 10) { out[i] = out[i+1] = out[i+2] = 0; out[i+3] = 255; continue; }
+                const lum = d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11;
+                const idx4 = i >> 2;
+                const x = (idx4 % 960 - 480) / 480, y = (Math.floor(idx4 / 960) - 300) / 300;
+                const centerBias = Math.max(0, 1 - Math.sqrt(x * x + y * y) * 0.65) * 55;
+                const val = Math.min(255, lum * 0.55 + centerBias);
+                out[i] = out[i+1] = out[i+2] = val; out[i+3] = 255;
+            }
+            depthCtx3D.putImageData(imgData, 0, 0);
+        } else {
+            const grad = depthCtx3D.createRadialGradient(480, 300, 0, 480, 300, 520);
+            grad.addColorStop(0, '#fff'); grad.addColorStop(1, '#111');
+            depthCtx3D.fillStyle = grad; depthCtx3D.fillRect(0, 0, 960, 600);
+        }
+        const tmp = document.createElement('canvas'); tmp.width = 960; tmp.height = 600;
+        const tCtx = tmp.getContext('2d');
+        tCtx.filter = 'blur(8px)'; tCtx.drawImage(depthCanvas3D, 0, 0);
+        depthCtx3D.clearRect(0, 0, 960, 600); depthCtx3D.drawImage(tmp, 0, 0);
+        if (_isMobilePerf) { smoothAndAnchorDepth(depthCtx3D, depthCanvas3D, false); compressDepthRange(depthCtx3D, depthCanvas3D); }
+        else applyDepthDilation(depthCtx3D, depthCanvas3D);
+        depthTexture.needsUpdate = true;
+    }
+
+    function applyAIDepth3D() {
+        if (!three3D || !rawDepthData3D) return;
+        const { depthCtx3D, depthCanvas3D, depthTexture } = three3D;
+        const imgData = depthCtx3D.createImageData(960, 600);
+        imgData.data.set(rawDepthData3D);
+        depthCtx3D.putImageData(imgData, 0, 0);
+        const tmp = document.createElement('canvas'); tmp.width = 960; tmp.height = 600;
+        const tCtx = tmp.getContext('2d');
+        tCtx.filter = 'blur(4px)'; tCtx.drawImage(depthCanvas3D, 0, 0);
+        depthCtx3D.clearRect(0, 0, 960, 600); depthCtx3D.drawImage(tmp, 0, 0);
+        if (_isMobilePerf) { smoothAndAnchorDepth(depthCtx3D, depthCanvas3D, false); compressDepthRange(depthCtx3D, depthCanvas3D); }
+        else applyDepthDilation(depthCtx3D, depthCanvas3D);
+        depthTexture.needsUpdate = true;
+    }
+
+    function generateSyntheticCharDepth3D() {
+        if (!three3D) return;
+        const { charDepthCtx3D, charDepthCanvas3D, charDepthTexture } = three3D;
+        charDepthCtx3D.clearRect(0, 0, 960, 600);
+        if (charImage) {
+            // BGと完全同一パイプライン: lum*0.55 + centerBias*55
+            // 透明PNG対策: alpha<0.1のピクセルは深度=0（スパイク防止）
+            // Dilationが崖ポリゴンを透明エリアへ押し出しExtrusion Artifactを解消（BGと同じ仕組み）
+            const tmp = document.createElement('canvas'); tmp.width = 960; tmp.height = 600;
+            tmp.getContext('2d').drawImage(charImage, charImageRect.x, charImageRect.y, charImageRect.w, charImageRect.h);
+            const d = tmp.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, 960, 600).data;
+            const imgData = charDepthCtx3D.createImageData(960, 600);
+            const out = imgData.data;
+            for (let i = 0; i < d.length; i += 4) {
+                const a = d[i + 3] / 255;
+                // alpha<0.1は透明エリア → 深度0（Dilationで崖が透明エリアへ移動するため機能する）
+                if (a < 0.1) { out[i] = out[i+1] = out[i+2] = 0; out[i+3] = 255; continue; }
+                const lum = d[i] * 0.3 + d[i+1] * 0.59 + d[i+2] * 0.11;
+                const idx4 = i >> 2;
+                const x = (idx4 % 960 - 480) / 480, y = (Math.floor(idx4 / 960) - 300) / 300;
+                const centerBias = Math.max(0, 1 - Math.sqrt(x * x + y * y) * 0.65) * 55;
+                const val = Math.min(255, lum * 0.55 + centerBias);
+                out[i] = out[i+1] = out[i+2] = val; out[i+3] = 255;
+            }
+            charDepthCtx3D.putImageData(imgData, 0, 0);
+        } else {
+            const grad = charDepthCtx3D.createRadialGradient(480, 300, 0, 480, 300, 460);
+            grad.addColorStop(0, '#ddd'); grad.addColorStop(1, '#222');
+            charDepthCtx3D.fillStyle = grad; charDepthCtx3D.fillRect(0, 0, 960, 600);
+        }
+        // BGと同じ: blur → Dilation（崖を透明エリアへ）
+        const blurTmp = document.createElement('canvas'); blurTmp.width = 960; blurTmp.height = 600;
+        blurTmp.getContext('2d').filter = 'blur(8px)';
+        blurTmp.getContext('2d').drawImage(charDepthCanvas3D, 0, 0);
+        charDepthCtx3D.clearRect(0, 0, 960, 600); charDepthCtx3D.drawImage(blurTmp, 0, 0);
+        if (_isMobilePerf) { smoothAndAnchorDepth(charDepthCtx3D, charDepthCanvas3D, true); compressDepthRange(charDepthCtx3D, charDepthCanvas3D, 80, 200); }
+        else applyDepthDilation(charDepthCtx3D, charDepthCanvas3D);
+        charDepthTexture.needsUpdate = true;
+    }
+
+    let _lastAnimTs = 0;
+    function threeAnimate() {
+        if (!is3D || !three3D) return;
+        // デルタタイムベースの lerp — fpsに関係なく一定「実時間」で追従する
+        const now = performance.now();
+        const dt = Math.min((now - (_lastAnimTs || now)) / 1000, 0.05); // 上限 50ms
+        _lastAnimTs = now;
+        const alpha = Math.min(
+            dt > 0 ? 1 - Math.exp(-dt * 7) : 0.12,
+            0.18
+        );
+        const gyroSign = gyroEnabled ? -1 : 1;
+        // モバイルは傾き感度1.3倍（より大きく傾くことで立体感が視認しやすくなる）
+        const _tMul = _isMobilePerf ? 1.3 : 1.0;
+        const tRY = gyroEnabled ? gyroSign * currentTiltX * 0.45 * _tMul : currentTiltX * 0.45 * _tMul;
+        const tRX = gyroEnabled ? gyroSign * currentTiltY * 0.28 * _tMul : currentTiltY * 0.28 * _tMul;
+        three3D.camera.position.x = 0;
+        three3D.camera.position.y = 0;
+        three3D.camera.lookAt(0, 0, 0);
+        // BGはジャイロ時はcharの40%だけ動かす（立体感を感じつつ背景として安定）
+        if (!gyroEnabled) {
+            three3D.mesh.rotation.y += (tRY - three3D.mesh.rotation.y) * alpha;
+            three3D.mesh.rotation.x += (tRX - three3D.mesh.rotation.x) * alpha;
+        } else {
+            three3D.mesh.rotation.y += (tRY * 0.4 - three3D.mesh.rotation.y) * alpha;
+            three3D.mesh.rotation.x += (tRX * 0.4 - three3D.mesh.rotation.x) * alpha;
+        }
+        three3D.charMesh.rotation.y += (tRY - three3D.charMesh.rotation.y) * alpha;
+        three3D.charMesh.rotation.x += (tRX - three3D.charMesh.rotation.x) * alpha;
+
+        // モバイルは変位スケールを1.5倍に強化（FOV=30+CSSkで端クリップ済みのため安全）
+        const _dMul     = _isMobilePerf ? 0.4 : 1.0; // BG: モバイルは40%で境界崖を抑制
+        const _dMulChar = _isMobilePerf ? 0.75 : 1.0; // char: モバイルは75%
+        three3D.material.displacementScale     = DISP_SCALE[current3DDepthKey]     * _dMul;
+        three3D.charMaterial.displacementScale = DISP_SCALE[currentChar3DDepthKey] * _dMulChar;
+        // 視差: モバイルは1.5倍オフセットで浮き上がり感を強調
+        const _pMul = _isMobilePerf ? 1.5 : 1.0;
+        const tPX = gyroSign * currentTiltX * charState.depth * 0.6 * _pMul;
+        const tPY = gyroSign * -currentTiltY * charState.depth * 0.4 * _pMul;
+        three3D.charMesh.position.x += (tPX - three3D.charMesh.position.x) * alpha;
+        three3D.charMesh.position.y += (tPY - three3D.charMesh.position.y) * alpha;
+        three3D.charMesh.position.z = charState.depth * 1.2 * _pMul;
+
+        // 単一シーン描画: char は depthTest:false, depthWrite:false で常にBGの上に
+        // renderOrder=1 で char が BG(renderOrder=0) の後に描画される
+        three3D.renderer.render(three3D.scene, three3D.camera);
+        three3DAnimId = requestAnimationFrame(threeAnimate);
+    }
+
+    // AI深度（自動適用）
+    let _aiDepthReady = false, _aiDepthEstimator = null, _pendingAIImg = null, _pendingAICharImg = null;
+    let rawCharDepthData3D = null;
+    let charAIDepthNativeCanvas = null;  // AI深度をキャラ画像ネイティブサイズで保持（位置再投影用）
+    (async function () {
+        try {
+            const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0');
+            env.allowLocalModels = false;
+            env.backends.onnx.wasm.numThreads = 1;
+            _aiDepthEstimator = await pipeline('depth-estimation', 'onnx-community/depth-anything-v2-small');
+            _aiDepthReady = true;
+            if (_pendingAIImg)     { applyAIDepthFromImage(_pendingAIImg);         _pendingAIImg = null; }
+            if (_pendingAICharImg) { applyAIDepthFromCharImage(_pendingAICharImg); _pendingAICharImg = null; }
+        } catch (e) { console.warn('AI depth init failed:', e); }
+    })();
+
+    async function applyAIDepthFromImage(img) {
+        if (!_aiDepthReady || !_aiDepthEstimator) { _pendingAIImg = img; return; }
+        if (!three3D) { _pendingAIImg = img; return; }
+        const statusEl = document.getElementById('aiStatus3D');
+        if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'BG AI深度解析中...'; }
+        try {
+            const aiW = 512, aiH = 320;  // モバイルもPCと同解像度でAI解析（深度品質をパリティ化）
+            const tmpCvs = document.createElement('canvas'); tmpCvs.width = aiW; tmpCvs.height = aiH;
+            tmpCvs.getContext('2d').drawImage(
+                img,
+                imageRect.x * aiW / 960, imageRect.y * aiH / 600,
+                imageRect.w * aiW / 960, imageRect.h * aiH / 600
+            );
+            const result = await _aiDepthEstimator(tmpCvs.toDataURL('image/jpeg', 0.85));
+            const aiDepthCvs = result.depth.toCanvas();
+            const outCvs = document.createElement('canvas'); outCvs.width = 960; outCvs.height = 600;
+            outCvs.getContext('2d').drawImage(aiDepthCvs, 0, 0, 960, 600);
+            rawDepthData3D = new Uint8ClampedArray(outCvs.getContext('2d').getImageData(0, 0, 960, 600).data);
+            applyAIDepth3D();
+            if (statusEl) { statusEl.textContent = '✅ BG AI深度完了'; setTimeout(() => { statusEl.style.display = 'none'; }, 1500); }
+        } catch (e) { console.warn('AI depth err:', e); if (statusEl) statusEl.style.display = 'none'; }
+    }
+
+    // キャラ深度マップを現在の charImageRect に合わせて charDepthCanvas3D へ投影
+    function positionCharDepth() {
+        if (!three3D) return;
+        const { charDepthCtx3D, charDepthCanvas3D, charDepthTexture } = three3D;
+        charDepthCtx3D.clearRect(0, 0, 960, 600);
+        if (charAIDepthNativeCanvas && charImage) {
+            charDepthCtx3D.drawImage(
+                charAIDepthNativeCanvas,
+                charImageRect.x, charImageRect.y, charImageRect.w, charImageRect.h
+            );
+            // シルエット外マスク（透明PNGのみ有効。不透明画像は全ピクセルalpha=255のため影響なし）
+            charDepthCtx3D.globalCompositeOperation = 'destination-in';
+            const maskTmp = document.createElement('canvas'); maskTmp.width = 960; maskTmp.height = 600;
+            maskTmp.getContext('2d').drawImage(charImage, charImageRect.x, charImageRect.y, charImageRect.w, charImageRect.h);
+            charDepthCtx3D.drawImage(maskTmp, 0, 0);
+            charDepthCtx3D.globalCompositeOperation = 'source-over';
+        }
+        // ===== alpha=255 強制 =====
+        // destination-in後、charImageRect外はalpha=0になる
+        // blur(CSS filter)はalpha=0隣接ピクセルとプリマルチプライ合成するため
+        // エッジ付近のdepth値が減少する → 機首など画像端のdepthが低下 → 埋まる原因
+        // → depth値があるピクセル(R>0)はalpha=255に強制し、BGと同条件でblurをかける
+        const rawId = charDepthCtx3D.getImageData(0, 0, 960, 600);
+        const rd = rawId.data;
+        for (let i = 0; i < rd.length; i += 4) {
+            if (rd[i] > 0 || rd[i+1] > 0 || rd[i+2] > 0) rd[i+3] = 255;
+        }
+        charDepthCtx3D.putImageData(rawId, 0, 0);
+        // blur（alpha=255統一後なのでエッジ暗化が発生しない）
+        const blurTmp = document.createElement('canvas'); blurTmp.width = 960; blurTmp.height = 600;
+        blurTmp.getContext('2d').filter = 'blur(4px)';
+        blurTmp.getContext('2d').drawImage(charDepthCanvas3D, 0, 0);
+        charDepthCtx3D.clearRect(0, 0, 960, 600); charDepthCtx3D.drawImage(blurTmp, 0, 0);
+        if (_isMobilePerf) { smoothAndAnchorDepth(charDepthCtx3D, charDepthCanvas3D, true); compressDepthRange(charDepthCtx3D, charDepthCanvas3D, 80, 200); }
+        else applyDepthDilation(charDepthCtx3D, charDepthCanvas3D);
+        charDepthTexture.needsUpdate = true;
+    }
+
+    async function applyAIDepthFromCharImage(img) {
+        if (!_aiDepthReady || !_aiDepthEstimator) { _pendingAICharImg = img; return; }
+        if (!three3D) { _pendingAICharImg = img; return; }
+        const statusEl = document.getElementById('aiStatus3D');
+        if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'キャラ AI深度解析中...'; }
+        try {
+            // キャラ画像をネイティブサイズ（最大512px幅）で AI へ入力
+            // → 位置・スケール情報を含まないため、charImageRect 変更時に再投影可能
+            const scale = Math.min(1, 512 / img.width);  // モバイルもPCと同解像度（深度品質パリティ化）
+            const tmpCvs = document.createElement('canvas');
+            tmpCvs.width  = Math.round(img.width  * scale);
+            tmpCvs.height = Math.round(img.height * scale);
+            tmpCvs.getContext('2d').drawImage(img, 0, 0, tmpCvs.width, tmpCvs.height);
+            const result = await _aiDepthEstimator(tmpCvs.toDataURL('image/jpeg', 0.85));
+            charAIDepthNativeCanvas = result.depth.toCanvas();  // ネイティブサイズで保持
+            positionCharDepth();  // 現在の charImageRect へ投影
+            if (statusEl) { statusEl.textContent = '✅ キャラ AI深度完了'; setTimeout(() => { statusEl.style.display = 'none'; }, 1500); }
+        } catch (e) { console.warn('AI char depth err:', e); if (statusEl) statusEl.style.display = 'none'; }
+    }
+
+    const _d3DBtns = ['btn3DDepth0', 'btn3DDepth05', 'btn3DDepth1', 'btn3DDepth2', 'btn3DDepth3'];
+    const _d3DKeys = { btn3DDepth0: '0', btn3DDepth05: '05', btn3DDepth1: '1', btn3DDepth2: '2', btn3DDepth3: '3' };
+    _d3DBtns.forEach(id => {
+        document.getElementById(id).onclick = () => {
+            current3DDepthKey = _d3DKeys[id];
+            if (three3D) three3D.material.displacementScale = DISP_SCALE[current3DDepthKey];
+            _d3DBtns.forEach(b => document.getElementById(b).classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        };
+    });
+
+    // キャラクター制御スライダー
+    function onCharChange() {
+        updateCharRect();
+        computeCharEdge();
+        draw();
+        if (charAIDepthNativeCanvas) positionCharDepth();
+        else generateSyntheticCharDepth3D();
+    }
+    document.getElementById('charX').addEventListener('input', e => {
+        charState.x = parseInt(e.target.value);
+        document.getElementById('charXVal').textContent = charState.x;
+        onCharChange();
+    });
+    document.getElementById('charY').addEventListener('input', e => {
+        charState.y = parseInt(e.target.value);
+        document.getElementById('charYVal').textContent = charState.y;
+        onCharChange();
+    });
+    document.getElementById('charScale').addEventListener('input', e => {
+        charState.scale = parseInt(e.target.value);
+        document.getElementById('charScaleVal').textContent = charState.scale + '%';
+        onCharChange();
+    });
+    document.getElementById('charDepthSlider').addEventListener('input', e => {
+        charState.depth = parseInt(e.target.value);
+        document.getElementById('charDepthVal').textContent = charState.depth;
+        updateCharDepth();
+        updateCharMesh();
+    });
+
+    // キャラ凸（ディスプレースメント）ボタン
+    const _charDispBtns = ['btnCharDisp0', 'btnCharDisp05', 'btnCharDisp1', 'btnCharDisp2', 'btnCharDisp3'];
+    const _charDispKeys = { btnCharDisp0: '0', btnCharDisp05: '05', btnCharDisp1: '1', btnCharDisp2: '2', btnCharDisp3: '3' };
+    _charDispBtns.forEach(id => {
+        document.getElementById(id).onclick = () => {
+            currentChar3DDepthKey = _charDispKeys[id];
+            if (three3D) three3D.charMaterial.displacementScale = DISP_SCALE[currentChar3DDepthKey];
+            _charDispBtns.forEach(b => document.getElementById(b).classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        };
+    });
+
+    // BG消去ボタン
+    document.getElementById('btnBgClear').onclick = () => {
+        baseImage = null; originalImageData = null; posterLayers = []; posterCtxs = [];
+        imageRect = { x: 0, y: 0, w: 960, h: 600 };
+        maskCtx.clearRect(0, 0, 960, 600);
+        rawDepthData3D = null;
+        document.getElementById('bgUpload').value = '';  // 同一ファイル再選択を可能にする
+        if (three3D) generateSyntheticDepth3D();
+        draw();  // updateMask は originalImageData=null で即return するので直接呼ぶ
+    };
+
+    // キャラ消去ボタン
+    document.getElementById('btnCharClear').onclick = () => {
+        charImage = null;
+        charAIDepthNativeCanvas = null;
+        rawCharDepthData3D = null;
+        charCtx.clearRect(0, 0, 960, 600);
+        charCanvasEl.style.transform = 'translateZ(0px)';
+        document.getElementById('charUpload').value = '';  // 同一ファイル再選択を可能にする
+        if (three3D) {
+            three3D.charColorTexture.needsUpdate = true;
+            generateSyntheticCharDepth3D();
+        }
+    };
+
+    const threeWrapEl = document.getElementById('threeWrap');
+    threeWrapEl.addEventListener('mousemove', handleMove);
+    threeWrapEl.addEventListener('mouseleave', handleLeave);
+    threeWrapEl.addEventListener('touchmove', handleMove, { passive: true });
+    threeWrapEl.addEventListener('touchend', handleLeave);
+
+    // ===== ジャイロスコープ =====
+    let gyroEnabled = false, _gyroHoloTs = 0, _gyroRebaseTs = 0;
+    function applyGyroTilt(px, py) {
+        if (returnAnim) { clearInterval(returnAnim); returnAnim = null; }
+        currentTiltX = px; currentTiltY = py;
+        if (!is3D) {
+            card.style.transition = 'none';
+            card.style.transform = 'rotateX(0deg) rotateY(0deg)';
+            document.getElementById('cardEdgeTop').style.boxShadow = `inset ${-px * 25}px ${-py * 25}px 40px rgba(255,255,255,0.35), inset 0 0 0 1px rgba(255,255,255,0.15)`;
+            card.style.setProperty('--light-angle', `${Math.atan2(py, -px)*(180/Math.PI)}deg`);
+            card.style.setProperty('--light-intensity', Math.min(1, Math.sqrt(px*px + py*py)));
+            scheduledDraw();
+        } else {
+            // 3Dモード: scheduledDraw()でテクスチャを更新。
+            // メモ: RAF内でdraw()を同期呼びするとフレームバジェットを超えてビクビクになるのでここで呼ぶ。
+            // scheduledDrawは_rafPendingフラグでデデュプ済みなので毎イベント呼んでも安全。
+            scheduledDraw();
+        }
+    }
+    let _gyroBase = null, _gyroSmooth = { px: 0, py: 0 }, _gyroLastTs = 0;
+    function rebaseGyro(e) {
+        // 現在のスムージング値を新しい基準に反映してドリフトをリセット
+        _gyroBase = { beta: e.beta ?? 45, gamma: e.gamma ?? 0 };
+        _gyroSmooth = { px: 0, py: 0 };
+        _gyroRebaseTs = performance.now();
+    }
+    function handleGyro(e) {
+        if (!gyroEnabled) return;
+        const now = performance.now();
+        if (now - _gyroLastTs < 33) return;
+        _gyroLastTs = now;
+        if (!_gyroBase) { rebaseGyro(e); return; }
+        const screenAngle = screen.orientation?.angle ?? (typeof window.orientation === 'number' ? window.orientation : 0);
+        const gRaw = (e.gamma ?? 0) - _gyroBase.gamma;
+        const bRaw = (e.beta  ?? 45) - _gyroBase.beta;
+        let rawPx, rawPy;
+        if (screenAngle === 90) {
+            rawPx = clamp( bRaw / 50, -1, 1);
+            rawPy = clamp(-gRaw / 50, -1, 1);
+        } else if (screenAngle === 270 || screenAngle === -90) {
+            rawPx = clamp(-bRaw / 50, -1, 1);
+            rawPy = clamp( gRaw / 50, -1, 1);
+        } else if (screenAngle === 180) {
+            rawPx = clamp(-gRaw / 50, -1, 1);
+            rawPy = clamp(-bRaw / 50, -1, 1);
+        } else {
+            rawPx = clamp(gRaw / 50, -1, 1);
+            rawPy = clamp(bRaw / 50, -1, 1);
+        }
+        _gyroSmooth.px += (rawPx - _gyroSmooth.px) * 0.07;
+        _gyroSmooth.py += (rawPy - _gyroSmooth.py) * 0.07;
+        const DEAD = 0.018;
+        const spx = Math.abs(_gyroSmooth.px) < DEAD ? 0 : _gyroSmooth.px;
+        const spy = Math.abs(_gyroSmooth.py) < DEAD ? 0 : _gyroSmooth.py;
+        // 定期キャリブレーション: スムース出力が小さい(=電話が休止位置に近い)ときのみ基準を更新
+        // 旧実装のバグ: dg<1.5 はドリフト量が1.5°以上なら永遠に満たされず機能しなかった
+        if (now - _gyroRebaseTs > 5000) {
+            const outputMag = Math.abs(spx) + Math.abs(spy);
+            if (outputMag < 0.10) {
+                // 出力が小さい = 休止位置 → 現在のセンサー値に35%引き寄せてドリフトを修正
+                _gyroBase.gamma += ((e.gamma ?? 0)  - _gyroBase.gamma) * 0.35;
+                _gyroBase.beta  += ((e.beta  ?? 45) - _gyroBase.beta)  * 0.35;
+                _gyroSmooth.px  *= 0.5;
+                _gyroSmooth.py  *= 0.5;
+            }
+            _gyroRebaseTs = now;
+        }
+        if (Math.abs(spx - currentTiltX) < 0.006 && Math.abs(spy - currentTiltY) < 0.006) return;
+        applyGyroTilt(spx, spy);
+    }
+    async function enableGyro() {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            try {
+                const perm = await DeviceOrientationEvent.requestPermission();
+                if (perm !== 'granted') { alert('ジャイロの許可が必要です'); return; }
+            } catch(e) { alert('ジャイロ許可エラー: ' + e); return; }
+        }
+        gyroEnabled = true;
+        _gyroBase = null;         // 次のイベントで基準をリセット
+        _gyroSmooth = { px: 0, py: 0 };  // スムージングバッファもリセット
+        _gyroLastTs = 0;
+        window.addEventListener('deviceorientation', handleGyro, true);
+        document.getElementById('btnGyro').classList.add('active');
+    }
+    function disableGyro() {
+        gyroEnabled = false;
+        window.removeEventListener('deviceorientation', handleGyro, true);
+        document.getElementById('btnGyro').classList.remove('active');
+    }
+    document.getElementById('btnGyro').onclick = () => gyroEnabled ? disableGyro() : enableGyro();
+
+    // ===== フルスクリーンタップ =====
+    let isCardFullscreen = false;
+    let _fsScaleBackup = 1;
+    function toggleCardFullscreen() {
+        isCardFullscreen = !isCardFullscreen;
+        const body = document.body;
+        const scWrap = document.getElementById('scaleWrap');
+        const twWrap = document.getElementById('threeWrap');
+        const tc = document.getElementById('threeContainer');
+        if (isCardFullscreen) {
+            body.classList.add('card-fullscreen');
+            const maxS = Math.min(window.innerWidth / 480, (window.innerHeight - 20) / 300);
+            _fsScaleBackup = maxS;
+            if (!is3D) {
+                cont.style.transform = `scale(${maxS})`;
+                scWrap.style.height = (300 * maxS) + 'px';
+            } else {
+                if (tc) { tc.style.width = (480 * maxS) + 'px'; tc.style.height = (300 * maxS) + 'px'; }
+                twWrap.style.height = (300 * maxS) + 'px';
+                if (three3D) {
+                    three3D.renderer.setSize(480 * maxS, 300 * maxS); three3D.camera.updateProjectionMatrix();
+
+                }
+            }
+        } else {
+            body.classList.remove('card-fullscreen');
+            // 元のスケール設定に戻す
+            const activeSBtn = document.querySelector('#btnScale1.active,#btnScale15.active,#btnScale2.active');
+            const s = activeSBtn ? parseFloat(activeSBtn.dataset.s || (activeSBtn.id.includes('15') ? 1.5 : activeSBtn.id.includes('2') ? 2 : 1)) : 1;
+            cont.style.transform = `scale(${s})`;
+            scWrap.style.height = (300 * s) + 'px';
+            if (tc) { tc.style.width = (480 * s) + 'px'; tc.style.height = (300 * s) + 'px'; }
+            twWrap.style.height = (300 * s) + 'px';
+            if (three3D) {
+                three3D.renderer.setSize(480 * s, 300 * s); three3D.camera.updateProjectionMatrix();
+
+            }
+        }
+    }
+    // タップ判定（移動量 < 8px かつ 300ms 以内）
+    let _tapDown = null;
+    const tapTargets = [document.getElementById('scaleWrap'), document.getElementById('threeWrap')];
+    tapTargets.forEach(el => {
+        el.addEventListener('pointerdown', e => { _tapDown = { x: e.clientX, y: e.clientY, t: Date.now() }; });
+        el.addEventListener('pointerup', e => {
+            if (!_tapDown) return;
+            const dx = Math.abs(e.clientX - _tapDown.x), dy = Math.abs(e.clientY - _tapDown.y), dt = Date.now() - _tapDown.t;
+            _tapDown = null;
+            if (dx < 8 && dy < 8 && dt < 300) toggleCardFullscreen();
+        });
+    });
+
+    // ===== 2D/3D トグルボタン =====
+    document.getElementById('btnToggle3D').onclick = () => setDisplayMode(!is3D);
+
+    // ===== モバイル自動検出・初期化 =====
+    const _isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry/i.test(navigator.userAgent) || window.innerWidth < 600;
+    _isMobilePerf = _isMobile;  // 描画ループ内のセル数制御に使用
+
+    // モバイルも 3D モードを使用: CSS 3D の辺ガタガタ問題を FXAA で解消
+    // WebGL 非対応端末のみ try-catch 内の setDisplayMode(false) でフォールバック
+    let is3D = true;
+
+    // 初期表示切り替え（DOM参照ができるここで）
+    if (is3D) {
+        document.getElementById('scaleWrap').style.display = 'none';
+        document.getElementById('threeWrap').style.display = 'flex';
+        document.getElementById('btnToggle3D').textContent = '3D';
+        document.getElementById('btnToggle3D').classList.add('active');
+    } else {
+        document.getElementById('scaleWrap').style.display = 'flex';
+        document.getElementById('threeWrap').style.display = 'none';
+        document.getElementById('btnToggle3D').textContent = '2D';
+        document.getElementById('btnToggle3D').classList.remove('active');
+    }
+
+    draw();
+    autoScaleCard();
+
+    if (is3D) {
+        try { init3D(); threeAnimate(); }
+        catch(e) { console.warn('3D startup failed:', e); setDisplayMode(false); }
+    }
+
+    updateIntensity('2');
+</script>
+</body>
+</html>
