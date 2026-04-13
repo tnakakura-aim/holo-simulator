@@ -2145,9 +2145,16 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         if (!gyroEnabled) {
             three3D.mesh.rotation.y += (tRY - three3D.mesh.rotation.y) * alpha;
             three3D.mesh.rotation.x += (tRX - three3D.mesh.rotation.x) * alpha;
+            three3D.mesh.position.x += (0 - three3D.mesh.position.x) * alpha;
+            three3D.mesh.position.y += (0 - three3D.mesh.position.y) * alpha;
         } else {
-            three3D.mesh.rotation.y += (tRY * 0.4 - three3D.mesh.rotation.y) * alpha;
-            three3D.mesh.rotation.x += (tRX * 0.4 - three3D.mesh.rotation.x) * alpha;
+            // rotation固定、positionをtiltでずらす → 飛び出た頂点が視差で動く
+            three3D.mesh.rotation.y += (0 - three3D.mesh.rotation.y) * alpha;
+            three3D.mesh.rotation.x += (0 - three3D.mesh.rotation.x) * alpha;
+            const bgPX = gyroSign * currentTiltX * 30;
+            const bgPY = gyroSign * -currentTiltY * 20;
+            three3D.mesh.position.x += (bgPX - three3D.mesh.position.x) * alpha;
+            three3D.mesh.position.y += (bgPY - three3D.mesh.position.y) * alpha;
         }
         three3D.charMesh.rotation.y += (tRY - three3D.charMesh.rotation.y) * alpha;
         three3D.charMesh.rotation.x += (tRX - three3D.charMesh.rotation.x) * alpha;
