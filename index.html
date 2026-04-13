@@ -2143,9 +2143,9 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
             three3D.mesh.rotation.y += (tRY - three3D.mesh.rotation.y) * alpha;
             three3D.mesh.rotation.x += (tRX - three3D.mesh.rotation.x) * alpha;
         } else {
-            // ジャイロ時はBGをcharの20%だけ回転（峰がわずかに動く視差）
-            three3D.mesh.rotation.y += (tRY * 0.2 - three3D.mesh.rotation.y) * alpha;
-            three3D.mesh.rotation.x += (tRX * 0.2 - three3D.mesh.rotation.x) * alpha;
+            // ジャイロ時はBG完全固定
+            three3D.mesh.rotation.y += (0 - three3D.mesh.rotation.y) * alpha;
+            three3D.mesh.rotation.x += (0 - three3D.mesh.rotation.x) * alpha;
         }
         three3D.mesh.position.x += (0 - three3D.mesh.position.x) * alpha;
         three3D.mesh.position.y += (0 - three3D.mesh.position.y) * alpha;
