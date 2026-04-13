@@ -491,9 +491,9 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
             const isGold = currentMode === 'gold';
             const isSilver = currentMode === 'silver';
             const cx2 = 480 + tiltX * 120, cy2 = 300 + tiltY * 80;
-            const lx = tiltX, ly = tiltY;
+            const lx = tiltX + 0.35, ly = tiltY - 0.25; // 初期光源を中心からずらす
             const lDist = Math.sqrt(lx * lx + ly * ly);
-            const hlStrBase = 0.42 + lDist * 0.58;
+            const hlStrBase = 0.28 + lDist * 0.38; // 最大明るさを抑制
             const scan = tiltX * 4 + tiltY * 4;
 
             const bumpPos = bumpLarge.map(bp => ({
@@ -666,9 +666,9 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         }
 
         // 凹凸ハイライトオーバーレイ（screen合成で薄く乗せる）
-        const lx = tiltX, ly = tiltY;
+        const lx = tiltX + 0.35, ly = tiltY - 0.25; // 初期光源を中心からずらす
         const lDist = Math.sqrt(lx * lx + ly * ly);
-        const hlStr = 0.14 + lDist * 0.20;
+        const hlStr = 0.10 + lDist * 0.14; // 最大明るさを抑制
         hCtx.save();
         hCtx.globalCompositeOperation = 'screen';
         for (let bi = 0; bi < bumpLarge.length; bi++) {
@@ -1358,7 +1358,7 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
                 hCtx.fillStyle = isGold ? `hsl(34,55%,8%)` : `hsl(214,8%,9%)`;
                 hCtx.fillRect(0, 0, 960, 600);
                 // ライト方向（チルト由来のみ。時間不変）
-                const lx = tiltX, ly = tiltY;
+                const lx = tiltX + 0.35, ly = tiltY - 0.25; // 初期光源を中心からずらす
                 const lDist = Math.sqrt(lx*lx + ly*ly);
                 const hlStr = 0.42 + lDist * 0.58;
                 // アンビエント（チルト追従ラジアル）
