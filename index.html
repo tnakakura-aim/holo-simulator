@@ -2417,10 +2417,10 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         const dBeta  = Math.abs((e.beta ?? 45) - _gyroPrevBeta);
         _gyroPrevGamma = e.gamma ?? 0;
         _gyroPrevBeta  = e.beta ?? 45;
-        if (dGamma < 0.3 && dBeta < 0.3) {
-            // 静止中: 1.5秒以上静止したら完全リベース
+        if (dGamma < 1.0 && dBeta < 1.0) {
+            // 静止中: 2秒以上静止したら完全リベース
             if (_gyroStillTs === 0) _gyroStillTs = now;
-            if (now - _gyroStillTs > 1500) {
+            if (now - _gyroStillTs > 2000) {
                 rebaseGyro(e);
                 _gyroStillTs = 0;
                 return;
