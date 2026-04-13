@@ -1011,7 +1011,7 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         // モバイルでプリズム/凸は15fpsに間引く（Canvas 2D描画負荷軽減）
         if (_isMobilePerf && (currentShape === 'prism' || currentShape === 'bump')) {
             const now = performance.now();
-            if (now - _drawLastTs < 66) return; // 66ms = 約15fps
+            if (now - _drawLastTs < 50) return; // 50ms = 約20fps
             _drawLastTs = now;
         }
         mCtx.clearRect(0, 0, 960, 600);
