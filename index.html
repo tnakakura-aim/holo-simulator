@@ -1885,6 +1885,21 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
             roughness: 0.55,
             metalness: 0.05,
         });
+        // 峰視差シェーダー: 変位量に比例してXYをずらす → 峰だけ動いて平面は固定
+        material._bgTiltUniforms = { uTiltX: { value: 0 }, uTiltY: { value: 0 } };
+        material.onBeforeCompile = (shader) => {
+            shader.uniforms.uTiltX = material._bgTiltUniforms.uTiltX;
+            shader.uniforms.uTiltY = material._bgTiltUniforms.uTiltY;
+            shader.vertexShader = 'uniform float uTiltX;\nuniform float uTiltY;\n' + shader.vertexShader;
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <displacementmap_vertex>',
+                `#include <displacementmap_vertex>
+                float dispAmt = texture2D( displacementMap, vUv ).r;
+                transformed.x += dispAmt * uTiltX * 300.0;
+                transformed.y += dispAmt * uTiltY * 300.0;`
+            );
+            material._bgShader = shader;
+        };
         const mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
 
@@ -2142,10 +2157,19 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         if (!gyroEnabled) {
             three3D.mesh.rotation.y += (tRY - three3D.mesh.rotation.y) * alpha;
             three3D.mesh.rotation.x += (tRX - three3D.mesh.rotation.x) * alpha;
+            // マウス時はシェーダー視差なし
+            if (three3D.material._bgTiltUniforms) {
+                three3D.material._bgTiltUniforms.uTiltX.value += (0 - three3D.material._bgTiltUniforms.uTiltX.value) * alpha;
+                three3D.material._bgTiltUniforms.uTiltY.value += (0 - three3D.material._bgTiltUniforms.uTiltY.value) * alpha;
+            }
         } else {
-            // ジャイロ時はBG完全固定
+            // ジャイロ時はBG rotation固定、シェーダーで峰だけ動かす
             three3D.mesh.rotation.y += (0 - three3D.mesh.rotation.y) * alpha;
             three3D.mesh.rotation.x += (0 - three3D.mesh.rotation.x) * alpha;
+            if (three3D.material._bgTiltUniforms) {
+                three3D.material._bgTiltUniforms.uTiltX.value += (gyroSign * currentTiltX - three3D.material._bgTiltUniforms.uTiltX.value) * alpha;
+                three3D.material._bgTiltUniforms.uTiltY.value += (-gyroSign * currentTiltY - three3D.material._bgTiltUniforms.uTiltY.value) * alpha;
+            }
         }
         three3D.mesh.position.x += (0 - three3D.mesh.position.x) * alpha;
         three3D.mesh.position.y += (0 - three3D.mesh.position.y) * alpha;
