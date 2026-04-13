@@ -1006,7 +1006,14 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         draw();
     }
 
+    let _drawLastTs = 0;
     function draw() {
+        // モバイルでプリズム/凸は15fpsに間引く（Canvas 2D描画負荷軽減）
+        if (_isMobilePerf && (currentShape === 'prism' || currentShape === 'bump')) {
+            const now = performance.now();
+            if (now - _drawLastTs < 66) return; // 66ms = 約15fps
+            _drawLastTs = now;
+        }
         mCtx.clearRect(0, 0, 960, 600);
         const isPrism = currentShape === 'prism';
         // EDGEが有効の場合、90°回転チルトで別角度ホログラムを事前レンダリング
@@ -2146,7 +2153,7 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         _lastAnimTs = now;
         const alpha = Math.min(
             dt > 0 ? 1 - Math.exp(-dt * 7) : 0.12,
-            gyroEnabled ? 0.35 : 0.18
+            gyroEnabled ? 0.5 : 0.18
         );
         const gyroSign = gyroEnabled ? -1 : 1;
         // モバイルは傾き感度1.3倍（より大きく傾くことで立体感が視認しやすくなる）
@@ -2449,7 +2456,7 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         // 大きく動いた時→素早く追従、小さい動き→ノイズ吸収
         const moveMag = Math.abs(rawPx - _gyroSmooth.px) + Math.abs(rawPy - _gyroSmooth.py);
         const smoothK = gyroEnabled
-            ? 0.04 + Math.min(moveMag * 4, 0.28)  // ジャイロ: 0.04〜0.32の可変
+            ? 0.04 + Math.min(moveMag * 4, 0.46)  // ジャイロ: 0.04〜0.50の可変
             : 0.04;
         _gyroSmooth.px += (rawPx - _gyroSmooth.px) * smoothK;
         _gyroSmooth.py += (rawPy - _gyroSmooth.py) * smoothK;
