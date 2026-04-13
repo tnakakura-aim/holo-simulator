@@ -2399,8 +2399,8 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         }
     }
     let _gyroBase = null, _gyroSmooth = { px: 0, py: 0 }, _gyroLastTs = 0;
+    let _gyroPrevGamma = 0, _gyroPrevBeta = 0, _gyroStillTs = 0; // 静止検出用
     function rebaseGyro(e) {
-        // 現在のスムージング値を新しい基準に反映してドリフトをリセット
         _gyroBase = { beta: e.beta ?? 45, gamma: e.gamma ?? 0 };
         _gyroSmooth = { px: 0, py: 0 };
         _gyroRebaseTs = performance.now();
@@ -2410,7 +2410,24 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         const now = performance.now();
         if (now - _gyroLastTs < 33) return;
         _gyroLastTs = now;
-        if (!_gyroBase) { rebaseGyro(e); return; }
+        if (!_gyroBase) { rebaseGyro(e); _gyroPrevGamma = e.gamma ?? 0; _gyroPrevBeta = e.beta ?? 45; return; }
+
+        // 静止検出: センサー値の変化量が小さければ静止カウント開始
+        const dGamma = Math.abs((e.gamma ?? 0) - _gyroPrevGamma);
+        const dBeta  = Math.abs((e.beta ?? 45) - _gyroPrevBeta);
+        _gyroPrevGamma = e.gamma ?? 0;
+        _gyroPrevBeta  = e.beta ?? 45;
+        if (dGamma < 0.3 && dBeta < 0.3) {
+            // 静止中: 1.5秒以上静止したら完全リベース
+            if (_gyroStillTs === 0) _gyroStillTs = now;
+            if (now - _gyroStillTs > 1500) {
+                rebaseGyro(e);
+                _gyroStillTs = 0;
+                return;
+            }
+        } else {
+            _gyroStillTs = 0; // 動いたらリセット
+        }
         const screenAngle = screen.orientation?.angle ?? (typeof window.orientation === 'number' ? window.orientation : 0);
         const gRaw = (e.gamma ?? 0) - _gyroBase.gamma;
         const bRaw = (e.beta  ?? 45) - _gyroBase.beta;
@@ -2433,19 +2450,7 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         const DEAD = 0.018;
         const spx = Math.abs(_gyroSmooth.px) < DEAD ? 0 : _gyroSmooth.px;
         const spy = Math.abs(_gyroSmooth.py) < DEAD ? 0 : _gyroSmooth.py;
-        // 定期キャリブレーション: スムース出力が小さい(=電話が休止位置に近い)ときのみ基準を更新
-        // 旧実装のバグ: dg<1.5 はドリフト量が1.5°以上なら永遠に満たされず機能しなかった
-        if (now - _gyroRebaseTs > 5000) {
-            const outputMag = Math.abs(spx) + Math.abs(spy);
-            if (outputMag < 0.10) {
-                // 出力が小さい = 休止位置 → 現在のセンサー値に35%引き寄せてドリフトを修正
-                _gyroBase.gamma += ((e.gamma ?? 0)  - _gyroBase.gamma) * 0.35;
-                _gyroBase.beta  += ((e.beta  ?? 45) - _gyroBase.beta)  * 0.35;
-                _gyroSmooth.px  *= 0.5;
-                _gyroSmooth.py  *= 0.5;
-            }
-            _gyroRebaseTs = now;
-        }
+        // 旧定期キャリブレーション廃止（静止検出方式に移行）
         if (Math.abs(spx - currentTiltX) < 0.006 && Math.abs(spy - currentTiltY) < 0.006) return;
         applyGyroTilt(spx, spy);
     }
