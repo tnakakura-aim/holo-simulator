@@ -2147,14 +2147,18 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
             three3D.mesh.rotation.x += (tRX - three3D.mesh.rotation.x) * alpha;
             three3D.mesh.position.x += (0 - three3D.mesh.position.x) * alpha;
             three3D.mesh.position.y += (0 - three3D.mesh.position.y) * alpha;
+            three3D.camera.position.x += (0 - three3D.camera.position.x) * alpha;
+            three3D.camera.position.y += (0 - three3D.camera.position.y) * alpha;
         } else {
-            // rotation固定、positionをtiltでずらす → 飛び出た頂点が視差で動く
+            // rotation固定、カメラをずらす → 飛び出た頂点だけ視差で動く
             three3D.mesh.rotation.y += (0 - three3D.mesh.rotation.y) * alpha;
             three3D.mesh.rotation.x += (0 - three3D.mesh.rotation.x) * alpha;
-            const bgPX = gyroSign * currentTiltX * 30;
-            const bgPY = gyroSign * -currentTiltY * 20;
-            three3D.mesh.position.x += (bgPX - three3D.mesh.position.x) * alpha;
-            three3D.mesh.position.y += (bgPY - three3D.mesh.position.y) * alpha;
+            three3D.mesh.position.x += (0 - three3D.mesh.position.x) * alpha;
+            three3D.mesh.position.y += (0 - three3D.mesh.position.y) * alpha;
+            const camPX = gyroSign * currentTiltX * 80;
+            const camPY = gyroSign * -currentTiltY * 55;
+            three3D.camera.position.x += (camPX - three3D.camera.position.x) * alpha;
+            three3D.camera.position.y += (camPY - three3D.camera.position.y) * alpha;
         }
         three3D.charMesh.rotation.y += (tRY - three3D.charMesh.rotation.y) * alpha;
         three3D.charMesh.rotation.x += (tRX - three3D.charMesh.rotation.x) * alpha;
