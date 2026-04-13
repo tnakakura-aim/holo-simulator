@@ -2411,8 +2411,8 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
             rawPx = clamp(gRaw / 50, -1, 1);
             rawPy = clamp(bRaw / 50, -1, 1);
         }
-        _gyroSmooth.px += (rawPx - _gyroSmooth.px) * 0.07;
-        _gyroSmooth.py += (rawPy - _gyroSmooth.py) * 0.07;
+        _gyroSmooth.px += (rawPx - _gyroSmooth.px) * 0.04;
+        _gyroSmooth.py += (rawPy - _gyroSmooth.py) * 0.04;
         const DEAD = 0.018;
         const spx = Math.abs(_gyroSmooth.px) < DEAD ? 0 : _gyroSmooth.px;
         const spy = Math.abs(_gyroSmooth.py) < DEAD ? 0 : _gyroSmooth.py;
