@@ -2146,7 +2146,7 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         _lastAnimTs = now;
         const alpha = Math.min(
             dt > 0 ? 1 - Math.exp(-dt * 7) : 0.12,
-            0.18
+            gyroEnabled ? 0.35 : 0.18
         );
         const gyroSign = gyroEnabled ? -1 : 1;
         // モバイルは傾き感度1.3倍（より大きく傾くことで立体感が視認しやすくなる）
@@ -2445,8 +2445,14 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
             rawPx = clamp(gRaw / 50, -1, 1);
             rawPy = clamp(bRaw / 50, -1, 1);
         }
-        _gyroSmooth.px += (rawPx - _gyroSmooth.px) * 0.04;
-        _gyroSmooth.py += (rawPy - _gyroSmooth.py) * 0.04;
+        // 動きの大きさに応じて可変スムージング
+        // 大きく動いた時→素早く追従、小さい動き→ノイズ吸収
+        const moveMag = Math.abs(rawPx - _gyroSmooth.px) + Math.abs(rawPy - _gyroSmooth.py);
+        const smoothK = gyroEnabled
+            ? 0.04 + Math.min(moveMag * 4, 0.28)  // ジャイロ: 0.04〜0.32の可変
+            : 0.04;
+        _gyroSmooth.px += (rawPx - _gyroSmooth.px) * smoothK;
+        _gyroSmooth.py += (rawPy - _gyroSmooth.py) * smoothK;
         const DEAD = 0.018;
         const spx = Math.abs(_gyroSmooth.px) < DEAD ? 0 : _gyroSmooth.px;
         const spy = Math.abs(_gyroSmooth.py) < DEAD ? 0 : _gyroSmooth.py;
