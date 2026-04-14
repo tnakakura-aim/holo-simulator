@@ -2170,9 +2170,9 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
                 three3D.material._bgTiltUniforms.uTiltY.value += (0 - three3D.material._bgTiltUniforms.uTiltY.value) * alpha;
             }
         } else {
-            // ジャイロ時はBG rotation固定、シェーダーで峰だけ動かす
-            three3D.mesh.rotation.y += (0 - three3D.mesh.rotation.y) * alpha;
-            three3D.mesh.rotation.x += (0 - three3D.mesh.rotation.x) * alpha;
+            // ジャイロ時はBG完全固定（即時0）
+            three3D.mesh.rotation.y = 0;
+            three3D.mesh.rotation.x = 0;
             if (three3D.material._bgTiltUniforms) {
                 three3D.material._bgTiltUniforms.uTiltX.value += (gyroSign * currentTiltX - three3D.material._bgTiltUniforms.uTiltX.value) * alpha;
                 three3D.material._bgTiltUniforms.uTiltY.value += (-gyroSign * currentTiltY - three3D.material._bgTiltUniforms.uTiltY.value) * alpha;
