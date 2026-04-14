@@ -2457,16 +2457,19 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
             _gyroStillTs = 0; // 動いたらリセット
         }
         const screenAngle = screen.orientation?.angle ?? (typeof window.orientation === 'number' ? window.orientation : 0);
+        // iPadは横持ちでもscreenAngle=0を返すことがある → 実際の画面サイズで補正
+        const isLandscape = window.innerWidth > window.innerHeight;
+        const effectiveAngle = (screenAngle === 0 && isLandscape) ? 90 : screenAngle;
         const gRaw = (e.gamma ?? 0) - _gyroBase.gamma;
         const bRaw = (e.beta  ?? 45) - _gyroBase.beta;
         let rawPx, rawPy;
-        if (screenAngle === 90) {
+        if (effectiveAngle === 90) {
             rawPx = clamp( bRaw / 50, -1, 1);
             rawPy = clamp(-gRaw / 50, -1, 1);
-        } else if (screenAngle === 270 || screenAngle === -90) {
+        } else if (effectiveAngle === 270 || effectiveAngle === -90) {
             rawPx = clamp(-bRaw / 50, -1, 1);
             rawPy = clamp( gRaw / 50, -1, 1);
-        } else if (screenAngle === 180) {
+        } else if (effectiveAngle === 180) {
             rawPx = clamp(-gRaw / 50, -1, 1);
             rawPy = clamp(-bRaw / 50, -1, 1);
         } else {
