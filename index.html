@@ -2512,6 +2512,16 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
     }
     document.getElementById('btnGyro').onclick = () => gyroEnabled ? disableGyro() : enableGyro();
 
+    // 画面回転時にジャイロ基準をリセット（iPad対応）
+    const _handleOrientationChange = () => {
+        if (!gyroEnabled) return;
+        _gyroBase = null;
+        _gyroSmooth = { px: 0, py: 0 };
+        _gyroStillTs = 0;
+    };
+    screen.orientation?.addEventListener('change', _handleOrientationChange);
+    window.addEventListener('orientationchange', _handleOrientationChange);
+
     // ===== フルスクリーンタップ =====
     let isCardFullscreen = false;
     let _fsScaleBackup = 1;
