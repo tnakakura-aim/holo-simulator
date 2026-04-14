@@ -2513,11 +2513,14 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
     document.getElementById('btnGyro').onclick = () => gyroEnabled ? disableGyro() : enableGyro();
 
     // 画面回転時にジャイロ基準をリセット（iPad対応）
+    // 遅延100ms: orientationchange発火時点ではinnerWidth/angleが未更新のため
     const _handleOrientationChange = () => {
         if (!gyroEnabled) return;
-        _gyroBase = null;
-        _gyroSmooth = { px: 0, py: 0 };
-        _gyroStillTs = 0;
+        setTimeout(() => {
+            _gyroBase = null;
+            _gyroSmooth = { px: 0, py: 0 };
+            _gyroStillTs = 0;
+        }, 100);
     };
     screen.orientation?.addEventListener('change', _handleOrientationChange);
     window.addEventListener('orientationchange', _handleOrientationChange);
