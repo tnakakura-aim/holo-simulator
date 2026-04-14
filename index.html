@@ -2458,8 +2458,18 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
             _gyroStillTs = 0; // 動いたらリセット
         }
         const isLandscape = window.innerWidth > window.innerHeight;
-        // screen.orientation.angleはiPadで信頼できないため、実際の画面サイズで判定
-        const effectiveAngle = isLandscape ? 90 : 0;
+        const rawAngle = screen.orientation?.angle ?? (typeof window.orientation === 'number' ? window.orientation : 0);
+        let effectiveAngle;
+        if (rawAngle === 90 && isLandscape) {
+            // Chromeスプリットビュー縦持ち: angle=90なのにウィンドウが横長になるケース
+            effectiveAngle = 0;
+        } else if (isLandscape) {
+            effectiveAngle = 90;
+        } else if (rawAngle === 270 || rawAngle === -90) {
+            effectiveAngle = 270;
+        } else {
+            effectiveAngle = 0;
+        }
 
         // デバッグ表示
         const dbg = document.getElementById('gyro-debug');
