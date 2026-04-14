@@ -1893,17 +1893,19 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
             metalness: 0.05,
         });
         // 峰視差シェーダー: 変位量に比例してXYをずらす → 峰だけ動いて平面は固定
-        material._bgTiltUniforms = { uTiltX: { value: 0 }, uTiltY: { value: 0 } };
+        material._bgTiltUniforms = { uTiltX: { value: 0 }, uTiltY: { value: 0 }, uAnchorDepth: { value: 0.5 } };
         material.onBeforeCompile = (shader) => {
             shader.uniforms.uTiltX = material._bgTiltUniforms.uTiltX;
             shader.uniforms.uTiltY = material._bgTiltUniforms.uTiltY;
-            shader.vertexShader = 'uniform float uTiltX;\nuniform float uTiltY;\n' + shader.vertexShader;
+            shader.uniforms.uAnchorDepth = material._bgTiltUniforms.uAnchorDepth;
+            shader.vertexShader = 'uniform float uTiltX;\nuniform float uTiltY;\nuniform float uAnchorDepth;\n' + shader.vertexShader;
             shader.vertexShader = shader.vertexShader.replace(
                 '#include <displacementmap_vertex>',
                 `#include <displacementmap_vertex>
                 float dispAmt = texture2D( displacementMap, vUv ).r;
-                transformed.x += dispAmt * uTiltX * 300.0;
-                transformed.y += dispAmt * uTiltY * 300.0;`
+                float relDepth = dispAmt - uAnchorDepth; // 端基準の相対深度
+                transformed.x += relDepth * uTiltX * 400.0;
+                transformed.y += relDepth * uTiltY * 400.0;`
             );
             material._bgShader = shader;
         };
@@ -1967,6 +1969,23 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
     // 深度マップのコントラスト圧縮（モバイル用）
     // 深度値の極端な0/255を中間値に寄せて「崖」の高さを均一に抑制
     // 黒いパーツ等のAI誤判断による急激な歪みを緩和する
+    // 深度マップの端ピクセル平均を計算（シェーダーのanchorDepth用）
+    function calcEdgeDepthAverage(ctx, w, h) {
+        const margin = 4; // 端から4px
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const d = imgData.data;
+        let sum = 0, count = 0;
+        for (let x = 0; x < w; x++) {
+            for (let y = 0; y < margin; y++) { sum += d[(y * w + x) * 4]; count++; }
+            for (let y = h - margin; y < h; y++) { sum += d[(y * w + x) * 4]; count++; }
+        }
+        for (let y = margin; y < h - margin; y++) {
+            for (let x = 0; x < margin; x++) { sum += d[(y * w + x) * 4]; count++; }
+            for (let x = w - margin; x < w; x++) { sum += d[(y * w + x) * 4]; count++; }
+        }
+        return count > 0 ? (sum / count) / 255 : 0.5;
+    }
+
     function compressDepthRange(ctx, canvas, minVal = 80, maxVal = 200) {
         const w = canvas.width, h = canvas.height;
         const imgData = ctx.getImageData(0, 0, w, h);
@@ -2087,6 +2106,7 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         if (_isMobilePerf) { smoothAndAnchorDepth(depthCtx3D, depthCanvas3D, false); compressDepthRange(depthCtx3D, depthCanvas3D); }
         else applyDepthDilation(depthCtx3D, depthCanvas3D);
         depthTexture.needsUpdate = true;
+        if (three3D?.material?._bgTiltUniforms) three3D.material._bgTiltUniforms.uAnchorDepth.value = calcEdgeDepthAverage(depthCtx3D, 960, 600);
     }
 
     function applyAIDepth3D() {
@@ -2102,6 +2122,7 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         if (_isMobilePerf) { smoothAndAnchorDepth(depthCtx3D, depthCanvas3D, false); compressDepthRange(depthCtx3D, depthCanvas3D); }
         else applyDepthDilation(depthCtx3D, depthCanvas3D);
         depthTexture.needsUpdate = true;
+        if (three3D?.material?._bgTiltUniforms) three3D.material._bgTiltUniforms.uAnchorDepth.value = calcEdgeDepthAverage(depthCtx3D, 960, 600);
     }
 
     function generateSyntheticCharDepth3D() {
