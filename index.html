@@ -274,6 +274,7 @@
     const SATURATION_MAP = { '0': 1, plus: 5.5, plus2: 14.5, plus3: 72 };
     const SAT_BRIGHT_COMP = { '0': 1.00, plus: 0.90, plus2: 0.82, plus3: 0.73 };
     const PRISM_LAYER_MAP = { '1': 3, '2': 4, '3': 5, '4': 6, '5': 7, '6': 9 };
+    const PRISM_LAYER_MAP_MOBILE = { '1': 2, '2': 3, '3': 4, '4': 5, '5': 6, '6': 7 };
     // ◈ ポスタリゼーション用レイヤー（輝度レベルに応じて動的に変更）
     let posterLayers = [];
     let posterCtxs = [];
@@ -400,9 +401,9 @@
     }
 
     function getPrismLayerCount() {
-        return PRISM_LAYER_MAP[currentIntensityLevel] || 4;
+        const map = _isMobilePerf ? PRISM_LAYER_MAP_MOBILE : PRISM_LAYER_MAP;
+        return map[currentIntensityLevel] || 3;
     }
-
     // === ◈ ポスタリゼーション（NewFile_holo.htmlベース） ===
 
     function generatePosterLayers() {
@@ -1012,7 +1013,7 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         // モバイルでプリズム/凸は15fpsに間引く（Canvas 2D描画負荷軽減）
         if (_isMobilePerf && (currentShape === 'prism' || currentShape === 'bump')) {
             const now = performance.now();
-            if (now - _drawLastTs < 50) return; // 50ms = 約20fps
+            if (now - _drawLastTs < 40) return; // 40ms = 約25fps
             _drawLastTs = now;
         }
         mCtx.clearRect(0, 0, 960, 600);
@@ -1177,8 +1178,9 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
     for (let i = 0; i < 20000; i++) sandParticles.push({ x: Math.random()*960, y: Math.random()*600, phase: Math.random()*Math.PI*2, size: Math.random()*6+3, hO: Math.random()*60-30 });
     // bump用 金銀凹凸データ（巨大３個固定・ここにランダムHLスポットも内包）
     function makeHL() {
-        return Array.from({length: 5}, (_, i) => {
-            const isCounter = i >= 3; // 後半2個は暗部でも光る逆ドリフト
+        const count = _isMobilePerf ? 3 : 5; // モバイルは3個に削減（グラデーション負荷軽減）
+        return Array.from({length: count}, (_, i) => {
+            const isCounter = i >= count - 2;
             return {
                 rx: (Math.random()-0.5)*1.9,
                 ry: (Math.random()-0.5)*1.9,
