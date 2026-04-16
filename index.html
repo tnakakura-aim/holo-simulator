@@ -209,7 +209,6 @@
 </div>
 
 <div id="fs-hint">TAP TO EXIT</div>
-<div id="gyro-debug" style="display:none;position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.8);color:#0ff;font-size:11px;font-family:monospace;padding:8px 12px;border-radius:6px;line-height:1.8;pointer-events:none;"></div>
 
 <div id="scaleWrap" style="height:300px; display:none;">
 <div class="card-perspective" id="cardContainer">
@@ -2472,13 +2471,7 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         } else {
             effectiveAngle = 0;
         }
-
-        // デバッグ表示
-        const dbg = document.getElementById('gyro-debug');
-        if (dbg) {
-            const rawAngle = screen.orientation?.angle ?? window.orientation ?? '?';
-            dbg.style.display = 'block';
-            dbg.innerHTML = `angle: ${rawAngle}<br>isLandscape: ${isLandscape}<br>effectiveAngle: ${effectiveAngle}<br>W×H: ${window.innerWidth}×${window.innerHeight}<br>gamma: ${(e.gamma??0).toFixed(1)}  beta: ${(e.beta??0).toFixed(1)}<br>tiltX: ${currentTiltX.toFixed(2)}  tiltY: ${currentTiltY.toFixed(2)}`;
+<br>isLandscape: ${isLandscape}<br>effectiveAngle: ${effectiveAngle}<br>W×H: ${window.innerWidth}×${window.innerHeight}<br>gamma: ${(e.gamma??0).toFixed(1)}  beta: ${(e.beta??0).toFixed(1)}<br>tiltX: ${currentTiltX.toFixed(2)}  tiltY: ${currentTiltY.toFixed(2)}`;
         }
         const gRaw = (e.gamma ?? 0) - _gyroBase.gamma;
         const bRaw = (e.beta  ?? 45) - _gyroBase.beta;
