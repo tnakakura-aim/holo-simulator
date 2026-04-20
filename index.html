@@ -2471,8 +2471,6 @@ function drawPrismFromImage(tiltX, tiltY, bh, sa) {
         } else {
             effectiveAngle = 0;
         }
-<br>isLandscape: ${isLandscape}<br>effectiveAngle: ${effectiveAngle}<br>W×H: ${window.innerWidth}×${window.innerHeight}<br>gamma: ${(e.gamma??0).toFixed(1)}  beta: ${(e.beta??0).toFixed(1)}<br>tiltX: ${currentTiltX.toFixed(2)}  tiltY: ${currentTiltY.toFixed(2)}`;
-        }
         const gRaw = (e.gamma ?? 0) - _gyroBase.gamma;
         const bRaw = (e.beta  ?? 45) - _gyroBase.beta;
         let rawPx, rawPy;
